@@ -666,7 +666,7 @@ fn image_menu(
         *action = Some(ImageAction::Replace(page, hit));
         ui.close();
     }
-    if ui.add_enabled(raster, egui::Button::new(tl!("Save Image As…"))).clicked() {
+    if ui.button(tl!("Save Image As…")).clicked() {
         *action = Some(ImageAction::Save(page, hit));
         ui.close();
     }

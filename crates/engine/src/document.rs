@@ -188,14 +188,77 @@ impl Document {
     }
 
     /// Save image as: image `index` on `page` as a file (extension, bytes).
+    /// If the item is a raster image or a Form holding a raster image, extracts its original
+    /// file (JPEG/PNG). If it is vector/grouped Form artwork, renders it as a crisp high-res PNG.
     pub fn page_image_file(&self, page: usize, index: usize) -> Result<(&'static str, Vec<u8>), String> {
         self.check_copying().map_err(|e| e.to_string())?;
-        let editor = self.editor.as_ref().ok_or("the document can't be read")?;
-        let img = self.page_images(page).into_iter().nth(index).ok_or_else(|| format!("page {} has no image {}", page + 1, index + 1))?;
-        if img.is_form {
-            return Err("grouped Form artwork is not a bitmap; Save Image As is only available for raster images".into());
+        if let Ok((ext, bytes)) = self.page_image_copy_file(page, index) {
+            return Ok((ext, bytes));
         }
-        pdfcraft_create::image_file(&editor.cos, img.object.ok_or("the image has no object")?)
+        self.render_page_image_png(page, index)
+    }
+
+    /// Render image or vector artwork `index` on `page` as a crisp high-resolution PNG file.
+    pub fn render_page_image_png(&self, page: usize, index: usize) -> Result<(&'static str, Vec<u8>), String> {
+        self.check_copying().map_err(|e| e.to_string())?;
+        let info = self.info.pages.get(page).ok_or_else(|| format!("page {} has no page info", page + 1))?;
+        let img = self.page_images(page).into_iter().nth(index).ok_or_else(|| format!("page {} has no image {}", page + 1, index + 1))?;
+        let rect = img.visible_rect.unwrap_or(img.rect);
+
+        let p0 = info.user_to_view(rect[0] as f32, rect[1] as f32);
+        let p1 = info.user_to_view(rect[2] as f32, rect[3] as f32);
+        let vx0 = p0[0].min(p1[0]).max(0.0);
+        let vy0 = p0[1].min(p1[1]).max(0.0);
+        let vx1 = p0[0].max(p1[0]).min(info.width);
+        let vy1 = p0[1].max(p1[1]).min(info.height);
+
+        let vw = vx1 - vx0;
+        let vh = vy1 - vy0;
+        if vw < 1.0 || vh < 1.0 {
+            return Err("the artwork has no visible area to save".into());
+        }
+
+        // Aim for crisp ~300 DPI (approx 4.16x) or at least 2400px on the longer side
+        let scale: f32 = (2400.0 / vw.max(vh)).clamp(2.0, 4.1667);
+        let tile = pdfcraft_render::Tile {
+            x: (vx0 * scale).floor().max(0.0) as u32,
+            y: (vy0 * scale).floor().max(0.0) as u32,
+            w: (vw * scale).ceil().max(1.0) as u32,
+            h: (vh * scale).ceil().max(1.0) as u32,
+        };
+
+        if (tile.w as u64) * (tile.h as u64) > pdfcraft_render::MAX_PIXELS as u64 {
+            return Err("the artwork area is too large to render".into());
+        }
+
+        let config = pdfcraft_render::RenderConfig {
+            password: self.password.as_deref().map(std::sync::Arc::from),
+            ..pdfcraft_render::RenderConfig::default()
+        };
+        let mut r = pdfcraft_render::PageRenderer::new(self.bytes.clone(), config);
+        let shot = r.render(pdfcraft_render::RenderRequest {
+            page,
+            kind: pdfcraft_render::RequestKind::Pixels,
+            tile: Some(tile),
+            scale,
+            tag: 0,
+            preview: false,
+        });
+        if let Some(e) = shot.error {
+            return Err(e);
+        }
+
+        let mut png_bytes = Vec::new();
+        image::ImageEncoder::write_image(
+            image::codecs::png::PngEncoder::new(&mut png_bytes),
+            &shot.rgba,
+            shot.width,
+            shot.height,
+            image::ExtendedColorType::Rgba8,
+        )
+        .map_err(|e| format!("could not encode PNG: {e}"))?;
+
+        Ok(("png", png_bytes))
     }
 
     /// Edit a PDF ▸ Edit text: the paragraphs on `page` (0-based).
