@@ -27,6 +27,10 @@
   <a href="#license">License</a>
 </p>
 
+<p align="center">
+  <img src="assets/screenshots/alepdf-welcome.png" width="95%" alt="AlePdf Welcome & Tools Hub">
+</p>
+
 ---
 
 ## Overview
@@ -48,6 +52,10 @@
 - **Direct Text Modification:** Insert, edit, replace, copy, and reposition text blocks inside PDF streams.
 - **Typography & Font Fidelity:** Full support for system and embedded fonts, kerning, ligatures, alignment, multi-line reflow, and world scripts (including vertical CJK, Arabic, and Hebrew).
 - **Search & Replace:** Fast whole-document search with regex, case sensitivity, and reading-order extraction.
+
+<p align="center">
+  <img src="assets/screenshots/alepdf-editor.png" width="95%" alt="AlePdf In-Place PDF Editor">
+</p>
 
 ### 2. Images, Graphics & Objects
 - **Image Manipulation:** Insert, replace, extract, crop, resize, and rotate embedded raster images.
