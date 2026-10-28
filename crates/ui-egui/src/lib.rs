@@ -84,7 +84,7 @@ use canvas::wheel_pager;
 use canvas::zoom_snap;
 use dialogs::appearance;
 use dialogs::comment_props;
-use dialogs::credits;
+pub(crate) use dialogs::credits;
 use dialogs::marks_ui;
 use dialogs::pageboxes;
 use dialogs::palette;
