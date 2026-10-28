@@ -1019,7 +1019,7 @@ fn arabic_is_registered_and_persists() {
 fn arabic_catalog_stays_logical() {
     let ar = arabic();
     assert_eq!(tr(ar, "Save as…"), "حفظ باسم…");
-    assert_eq!(tr(ar, "About AleCraft"), "حول AleCraft");
+    assert_eq!(tr(ar, "About AlePdf"), "حول AlePdf");
     assert_eq!(tr(ar, "Name:"), "الاسم:");
     assert_eq!(tr(ar, "Issued by: "), "صادرة عن: ");
     // Placeholders survive in their logical positions.

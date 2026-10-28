@@ -575,16 +575,16 @@ pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
     )
 }
 
-/// The AleCraft app logo, `size` points square.
-pub fn alecraft_logo(ui: &mut egui::Ui, size: f32) -> Response {
+/// The AlePdf app logo, `size` points square.
+pub fn alepdf_logo(ui: &mut egui::Ui, size: f32) -> Response {
     ui.add(
         egui::Image::from_bytes(
-            "bytes://alecraft-logo.png",
+            "bytes://alepdf-logo.png",
             include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png"),
         )
         .fit_to_exact_size(vec2(size, size))
         .corner_radius(CornerRadius::same((size * 0.22) as u8))
-        .alt_text("AleCraft"),
+        .alt_text("AlePdf"),
     )
 }
 

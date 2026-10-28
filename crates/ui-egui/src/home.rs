@@ -26,10 +26,10 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
             ui.horizontal(|ui| {
-                widgets::alecraft_logo(ui, 52.0);
+                widgets::alepdf_logo(ui, 52.0);
                 ui.add_space(8.0);
                 ui.vertical(|ui| {
-                    ui.label(egui::RichText::new("AleCraft").font(theme::semibold(26.0)));
+                    ui.label(egui::RichText::new("AlePdf").font(theme::semibold(26.0)));
                     ui.label(
                         egui::RichText::new(tl!("Professional PDF Editor for macOS"))
                             .color(t.text_muted)
@@ -170,7 +170,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             });
             ui.add_space(8.0);
             if app.recent.is_empty() {
-                ui.label(egui::RichText::new(tl!("Files you open in AleCraft appear here. Drop a PDF anywhere to open it.")).color(t.text_muted));
+                ui.label(egui::RichText::new(tl!("Files you open in AlePdf appear here. Drop a PDF anywhere to open it.")).color(t.text_muted));
             }
             let mut open = None;
             let mut remove = None;
@@ -236,7 +236,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             ui.add_space(20.0);
             widgets::section_title(ui, tl!("Privacy"));
             ui.label(
-                egui::RichText::new(tl!("AleCraft works offline. No telemetry, no account, and no cloud processing unless you add a provider."))
+                egui::RichText::new(tl!("AlePdf works offline. No telemetry, no account, and no cloud processing unless you add a provider."))
                     .color(t.text_muted),
             );
         });

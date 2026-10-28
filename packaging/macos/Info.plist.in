@@ -7,13 +7,13 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>AleCraft</string>
+  <string>AlePdf</string>
   <key>CFBundleName</key>
-  <string>AleCraft</string>
+  <string>AlePdf</string>
   <key>CFBundleExecutable</key>
-  <string>AleCraft</string>
+  <string>AlePdf</string>
   <key>CFBundleIdentifier</key>
-  <string>com.alecraft.editor</string>
+  <string>com.alepdf.editor</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -24,12 +24,12 @@
   <string>@SHORT_VERSION@</string>
   <key>CFBundleVersion</key>
   <string>@SHORT_VERSION@</string>
-  <key>AleCraftVersion</key>
+  <key>AlePdfVersion</key>
   <string>@VERSION@</string>
-  <key>AleCraftBuildCommit</key>
+  <key>AlePdfBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>AleCraft</string>
+  <string>AlePdf</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
   <!-- Must match MACOSX_DEPLOYMENT_TARGET in package.sh. Big Sur is the first release on
@@ -43,9 +43,9 @@
   <key>NSRequiresAquaSystemAppearance</key>
   <false/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © 2026 AleCraft. All rights reserved.</string>
+  <string>Copyright © 2026 AlePdf. All rights reserved.</string>
 
-  <!-- Documents AleCraft opens (#73): it is offered under Open With and can be made the default
+  <!-- Documents AlePdf opens (#73): it is offered under Open With and can be made the default
        for PDFs, without taking over from the system's viewer on install ("Alternate"). Declared by
        UTI (LSItemContentTypes, what modern macOS filters Open With > Recommended Applications on),
        plus extension and MIME type for backward compatibility. Finder hands the
@@ -60,7 +60,7 @@
       <key>LSHandlerRank</key>
       <string>Alternate</string>
       <key>CFBundleTypeIconFile</key>
-      <string>AleCraft</string>
+      <string>AlePdf</string>
       <key>LSItemContentTypes</key>
       <array><string>com.adobe.pdf</string></array>
       <key>CFBundleTypeExtensions</key>

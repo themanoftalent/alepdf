@@ -35,16 +35,16 @@ jobs:
           chmod +x packaging/macos/package.sh packaging/env.sh
           ./packaging/macos/package.sh --arch universal
 
-      - name: Upload AleCraft DMG
+      - name: Upload AlePdf DMG
         uses: actions/upload-artifact@v4
         with:
-          name: AleCraft-Universal-DMG
-          path: dist/release/AleCraft.dmg
+          name: AlePdf-Universal-DMG
+          path: dist/release/AlePdf.dmg
           if-no-files-found: error
 
-      - name: Upload AleCraft App Bundle
+      - name: Upload AlePdf App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: AleCraft-App-Bundle
-          path: target/macos-package/AleCraft.app
+          name: AlePdf-App-Bundle
+          path: target/macos-package/AlePdf.app
           if-no-files-found: error
