@@ -178,6 +178,9 @@ impl PdfCraftApp {
             "file.save_as" => {
                 self.save_active(SaveTarget::As);
             }
+            "file.save_google_drive" => {
+                self.save_or_sync_to_google_drive();
+            }
             "file.close" => {
                 if let Some(i) = active {
                     self.request_close_tab(i);

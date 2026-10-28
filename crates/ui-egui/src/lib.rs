@@ -27,6 +27,7 @@ macro_rules! tl_ctx {
 }
 pub mod canvas;
 mod chrome;
+pub mod google_drive;
 pub use combine_grid::ThumbState as CombineThumb;
 pub use combine_ui::{Columns as CombineColumns, CombineView, Lock as CombineLock, SortKey};
 mod commands;

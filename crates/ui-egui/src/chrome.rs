@@ -510,6 +510,39 @@ pub fn mode_bar(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                         if icons::button(ui, "save", 32.0, false, &tip).clicked() {
                             app.run_command("file.save");
                         }
+                        // Google Drive Save & Sync button
+                        let in_gdrive = app.is_active_in_google_drive();
+                        let gdrive_icon = if in_gdrive { "cloud" } else { "cloud-upload" };
+                        let gdrive_tip = if in_gdrive {
+                            tl!("Synced with Google Drive (click to sync latest changes)")
+                        } else {
+                            tl!("Save to Google Drive & sync with cloud")
+                        };
+                        let gdrive_resp = icons::button(ui, gdrive_icon, 32.0, in_gdrive, &gdrive_tip);
+                        if gdrive_resp.clicked() {
+                            app.save_or_sync_to_google_drive();
+                        }
+                        egui::Popup::context_menu(&gdrive_resp).id(gdrive_resp.id.with("gdrive_ctx")).show(|ui| {
+                            if in_gdrive {
+                                if ui.button(tl!("Sync with Google Drive now")).clicked() {
+                                    app.save_or_sync_to_google_drive();
+                                    ui.close();
+                                }
+                                if ui.button(tl!("Reveal in Google Drive")).clicked() {
+                                    app.reveal_active_in_google_drive();
+                                    ui.close();
+                                }
+                            } else {
+                                if ui.button(tl!("Save to Google Drive")).clicked() {
+                                    app.save_or_sync_to_google_drive();
+                                    ui.close();
+                                }
+                            }
+                            if ui.button(tl!("Open Google Drive folder…")).clicked() {
+                                app.open_google_drive_folder();
+                                ui.close();
+                            }
+                        });
                         let tip = crate::commands::command_tip(ui.ctx(), tl!("Document properties ({key})"), "file.properties");
                         if icons::button(ui, "info", 32.0, false, &tip).clicked() {
                             app.dialog = Some(Dialog::Properties(PropsTab::Description));
