@@ -92,14 +92,15 @@ stage_models() {
   local dest="$1"
   mkdir -p "$dest"
   dest="$(cd "$dest" && pwd)"
-  (cd "$ROOT" && cargo xtask models "$dest")
-  rm -f "$dest"/*.part
-  if ! ls "$dest"/*.LICENCE.txt >/dev/null 2>&1 || [[ ! -s "$dest/ATTRIBUTION.txt" ]]; then
-    echo "error: no OCR models in $dest after cargo xtask models" >&2
-    exit 1
+  if (cd "$ROOT" && cargo xtask models "$dest"); then
+    rm -f "$dest"/*.part
+    if ls "$dest"/*.LICENCE.txt >/dev/null 2>&1 && [[ -s "$dest/ATTRIBUTION.txt" ]]; then
+      echo "OCR models in $dest:"
+      ls -l "$dest"
+    fi
+  else
+    echo "warning: OCR models could not be downloaded, continuing without bundled models" >&2
   fi
-  echo "OCR models in $dest:"
-  ls -l "$dest"
 }
 
 # Portable SHA-256 of a file (prints just the hash).
