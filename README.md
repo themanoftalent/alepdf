@@ -53,9 +53,6 @@
 - **Typography & Font Fidelity:** Full support for system and embedded fonts, kerning, ligatures, alignment, multi-line reflow, and world scripts (including vertical CJK, Arabic, and Hebrew).
 - **Search & Replace:** Fast whole-document search with regex, case sensitivity, and reading-order extraction.
 
-<p align="center">
-  <img src="assets/screenshots/alepdf-editor.png" width="95%" alt="AlePdf In-Place PDF Editor">
-</p>
 
 ### 2. Images, Graphics & Objects
 - **Image Manipulation:** Insert, replace, extract, crop, resize, and rotate embedded raster images.
@@ -183,8 +180,11 @@ AlePdf
 
 ## License
 
-AlePdf is dual-licensed under:
+AlePdf is intended to be dual-licensed under:
+
 - **MIT License** ([LICENSE-MIT](LICENSE-MIT))
 - **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
 
-All bundled fonts, icons, and assets are open-source and documented in [ATTRIBUTION.md](ATTRIBUTION.md).
+Bundled third-party fonts, icons, and assets should be documented in [ATTRIBUTION.md](ATTRIBUTION.md).
+
+> **Implementation status:** This README describes the intended AlePdf product and architecture. Features, build commands, repository availability, licensing files, and release artifacts have not been independently verified against the source repository. All package names, source paths, icon files, bundle identifiers, and packaging scripts must be migrated consistently before the renamed build can be expected to work.
