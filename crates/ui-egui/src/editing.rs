@@ -278,6 +278,10 @@ impl PdfCraftApp {
                 self.leave_camera(i);
                 self.execute(command);
             }
+            Some(crate::canvas::ViewAction::OpenFormatPanel) => {
+                self.left = crate::LeftPanel::Tool("edit");
+                self.left_open = true;
+            }
             None => {}
         }
         applied
