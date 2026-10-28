@@ -30,7 +30,8 @@ impl Document {
     }
 
     /// Copy Image in Original Format: picture `index` on `page` as a file (extension, bytes):
-    /// a JPEG as stored in the PDF, otherwise a lossless PNG.
+    /// a JPEG as stored in the PDF, otherwise a lossless PNG. If it is grouped Form artwork
+    /// or vector graphics, renders it as a crisp high-res PNG.
     pub fn page_image_copy_file(&self, page: usize, index: usize) -> Result<(&'static str, Vec<u8>), String> {
         let editor = self.editor.as_ref().ok_or("the document can't be read")?;
         let img = self.page_images(page).into_iter().nth(index).ok_or_else(|| format!("page {} has no image {}", page + 1, index + 1))?;
@@ -42,7 +43,10 @@ impl Document {
     /// Copy Image: picture `index` on `page` at its own resolution, as straight (unpremultiplied)
     /// RGBA pixels (width, height, pixels) for the clipboard. Soft masks become alpha.
     pub fn page_image_rgba(&self, page: usize, index: usize) -> Result<(u32, u32, Vec<u8>), String> {
-        let (_, bytes) = self.page_image_copy_file(page, index)?;
+        let (_, bytes) = match self.page_image_copy_file(page, index) {
+            Ok(file) => file,
+            Err(_) => self.render_page_image_png(page, index)?,
+        };
         let format = image::guess_format(&bytes).map_err(|e| e.to_string())?;
         let mut reader = image::ImageReader::with_format(std::io::Cursor::new(bytes.as_slice()), format);
         let mut limits = image::Limits::default();
