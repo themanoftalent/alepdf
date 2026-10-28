@@ -47,10 +47,13 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         ui.horizontal(|ui| {
-                            widgets::artcraft_mark(ui, 28.0);
+                            let (rect, _) = ui.allocate_exact_size(vec2(28.0, 28.0), Sense::hover());
+                            ui.painter().rect_filled(rect, CornerRadius::same(6), egui::Color32::from_rgb(0x00, 0x7A, 0xFF));
+                            ui.painter().text(rect.center(), Align2::CENTER_CENTER, "{}", theme::semibold(14.0), egui::Color32::WHITE);
+                            ui.add_space(4.0);
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new(tl!("Join the ArtCraft community")).font(theme::semibold(15.0)));
-                                ui.label(egui::RichText::new(tl!("Get help, share feedback and follow development on Discord.")).color(t.text_muted));
+                                ui.label(egui::RichText::new("Open Source | SoftAI Yazılım").font(theme::semibold(15.0)));
+                                ui.label(egui::RichText::new("Developed by Assoc. Prof. Dr. Mehmet Akif Cifci (@themanoftalent)").color(t.text_muted));
                             });
                             // Closed for this run only: the card is back on the next launch.
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -59,10 +62,19 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                                 }
                             });
                         });
-                        ui.add_space(8.0);
-                        if let Some(cmd) = widgets::community_links(ui) {
-                            app.execute(cmd);
-                        }
+                        ui.add_space(10.0);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
+                            if ui.button(egui::RichText::new("</>  GitHub").font(theme::medium(12.5))).clicked() {
+                                ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/themanoftalent"));
+                            }
+                            if ui.button(egui::RichText::new("❤️  Sponsor Me").font(theme::medium(12.5))).clicked() {
+                                ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/sponsors/themanoftalent"));
+                            }
+                            if ui.button(egui::RichText::new("☕  Buy Me a Coffee").font(theme::medium(12.5))).clicked() {
+                                ui.ctx().open_url(egui::OpenUrl::new_tab("https://buymeacoffee.com/themanoftalent"));
+                            }
+                        });
                     });
                 ui.add_space(22.0);
             }

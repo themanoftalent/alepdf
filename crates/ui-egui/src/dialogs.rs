@@ -1343,32 +1343,82 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                     1 => crate::credits::contributors_ui(ui),
                     2 => crate::credits::models_ui(ui),
                     _ => {
-                        ui.horizontal(|ui| {
-                            widgets::alepdf_logo(ui, 48.0);
-                            ui.vertical(|ui| {
-                                ui.label(egui::RichText::new("AlePdf").font(theme::semibold(20.0)));
-                                ui.label(egui::RichText::new("Professional PDF Editor for macOS").color(t.text_muted).small());
-                                ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
-                            });
+                        ui.vertical_centered(|ui| {
+                            widgets::alepdf_logo(ui, 56.0);
+                            ui.add_space(6.0);
+                            ui.label(egui::RichText::new("AlePdf").font(theme::semibold(20.0)));
+                            ui.label(egui::RichText::new(format!("Version {} (2026)", pdfcraft_engine::build_info::version())).color(t.text_muted).font(theme::regular(12.0)));
+                            ui.add_space(2.0);
+                            ui.label(egui::RichText::new("A modern, lightweight native PDF editor for macOS.").color(t.text_muted).font(theme::regular(12.5)));
                         });
-                        ui.add_space(6.0);
-                        ui.label(tl!("A clean-room, open-source PDF application written in Rust. MIT OR Apache-2.0."));
-                        ui.label(
-                            egui::RichText::new(
-                                "Rendering: hayro (bootstrap) · UI: egui · Icons: Lucide (ISC) · Fonts: Inter, JetBrains Mono, Dancing Script (OFL)",
-                            )
-                            .color(t.text_muted)
-                            .small(),
-                        );
                         ui.add_space(12.0);
-                        ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(tl!("Part of")).color(t.text_muted));
-                            widgets::artcraft_logo(ui, 16.0);
-                        });
-                        ui.add_space(6.0);
-                        if let Some(cmd) = widgets::community_links(ui) {
-                            link_command = Some(cmd);
-                        }
+
+                        // Card 1: Open Source | Free to Fork & Use
+                        egui::Frame::NONE
+                            .fill(t.card)
+                            .stroke(egui::Stroke::new(1.0, t.border))
+                            .corner_radius(egui::CornerRadius::same(12))
+                            .inner_margin(egui::Margin::same(14))
+                            .show(ui, |ui| {
+                                ui.set_width(ui.available_width());
+                                ui.horizontal(|ui| {
+                                    let (rect, _) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), egui::Sense::hover());
+                                    ui.painter().rect_filled(rect, egui::CornerRadius::same(6), egui::Color32::from_rgb(0x00, 0x7A, 0xFF));
+                                    ui.painter().text(rect.center(), egui::Align2::CENTER_CENTER, "{}", theme::semibold(13.0), egui::Color32::WHITE);
+                                    ui.add_space(4.0);
+                                    ui.label(egui::RichText::new("Open Source | Free to Fork & Use").font(theme::semibold(13.5)));
+                                });
+                                ui.add_space(6.0);
+                                ui.label(egui::RichText::new("Feel free to fork, modify, use, and contribute!").color(t.text_muted).font(theme::regular(12.0)));
+                                ui.add_space(8.0);
+                                egui::Grid::new("softai_dev_grid").num_columns(2).spacing([12.0, 4.0]).show(ui, |ui| {
+                                    ui.label(egui::RichText::new("Developed by:").color(t.text_muted).font(theme::regular(12.5)));
+                                    ui.label(egui::RichText::new("SoftAI Yazılım").font(theme::semibold(12.5)));
+                                    ui.end_row();
+
+                                    ui.label(egui::RichText::new("Developer:").color(t.text_muted).font(theme::regular(12.5)));
+                                    ui.label(egui::RichText::new("Assoc. Prof. Dr. Mehmet Akif Cifci").font(theme::semibold(12.5)));
+                                    ui.end_row();
+
+                                    ui.label(egui::RichText::new("GitHub:").color(t.text_muted).font(theme::regular(12.5)));
+                                    if ui.link(egui::RichText::new("@themanoftalent").font(theme::semibold(12.5))).clicked() {
+                                        ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/themanoftalent"));
+                                    }
+                                    ui.end_row();
+                                });
+                            });
+
+                        ui.add_space(10.0);
+
+                        // Card 2: Follow & Support
+                        egui::Frame::NONE
+                            .fill(t.card)
+                            .stroke(egui::Stroke::new(1.0, t.border))
+                            .corner_radius(egui::CornerRadius::same(12))
+                            .inner_margin(egui::Margin::same(14))
+                            .show(ui, |ui| {
+                                ui.set_width(ui.available_width());
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new("❤️").font(theme::regular(15.0)));
+                                    ui.add_space(4.0);
+                                    ui.label(egui::RichText::new("Follow & Support").font(theme::semibold(13.5)));
+                                });
+                                ui.add_space(6.0);
+                                ui.label(egui::RichText::new("If you find this project useful, star the repository, follow me, or buy me a coffee! Your support helps keep future projects free and open-source.").color(t.text_muted).font(theme::regular(12.0)));
+                                ui.add_space(10.0);
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+                                    if ui.button(egui::RichText::new("</>  GitHub").font(theme::medium(12.0))).clicked() {
+                                        ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/themanoftalent"));
+                                    }
+                                    if ui.button(egui::RichText::new("❤️  Sponsor Me").font(theme::medium(12.0))).clicked() {
+                                        ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/sponsors/themanoftalent"));
+                                    }
+                                    if ui.button(egui::RichText::new("☕  Buy Me a Coffee").font(theme::medium(12.0))).clicked() {
+                                        ui.ctx().open_url(egui::OpenUrl::new_tab("https://buymeacoffee.com/themanoftalent"));
+                                    }
+                                });
+                            });
                     }
                 }
             }
