@@ -556,6 +556,7 @@ pub fn progress_notice(app: &PdfCraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// The ArtCraft wordmark (Storyteller's brand, docs/brand/; not open source), sized to `height`.
+#[allow(dead_code)]
 pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
     let dark = ui.visuals().dark_mode;
     let (uri, bytes): (&str, &'static [u8]) = if dark {
@@ -566,7 +567,7 @@ pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
     ui.add(egui::Image::from_bytes(uri, bytes).max_height(height).alt_text("ArtCraft"))
 }
 
-/// The ArtCraft mark (brand blue, works on light and dark), `size` points square.
+#[allow(dead_code)]
 pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
     ui.add(
         egui::Image::from_bytes("bytes://artcraft-mark.svg", include_bytes!("../../../docs/brand/artcraft-mark.svg"))
@@ -577,19 +578,45 @@ pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
 
 /// The AlePdf app logo, `size` points square.
 pub fn alepdf_logo(ui: &mut egui::Ui, size: f32) -> Response {
+    let texture = ui.ctx().load_texture(
+        "alepdf-logo-texture",
+        alepdf_logo_color_image().clone(),
+        egui::TextureOptions::LINEAR,
+    );
     ui.add(
-        egui::Image::from_bytes(
-            "bytes://alepdf-logo.png",
-            include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png"),
-        )
-        .fit_to_exact_size(vec2(size, size))
-        .corner_radius(CornerRadius::same((size * 0.22) as u8))
-        .alt_text("AlePdf"),
+        egui::Image::new(&texture)
+            .fit_to_exact_size(vec2(size, size))
+            .corner_radius(CornerRadius::same((size * 0.22) as u8)),
     )
+}
+
+fn alepdf_logo_color_image() -> &'static egui::ColorImage {
+    static IMAGE: std::sync::OnceLock<egui::ColorImage> = std::sync::OnceLock::new();
+    IMAGE.get_or_init(|| {
+        let bytes = include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png");
+        match image::load_from_memory(bytes) {
+            Ok(img) => {
+                let rgba = img.to_rgba8();
+                let dims = [rgba.width() as usize, rgba.height() as usize];
+                egui::ColorImage::from_rgba_unmultiplied(dims, rgba.as_raw())
+            }
+            Err(e) => {
+                log::warn!("could not decode AlePdf logo: {e}");
+                egui::ColorImage::example()
+            }
+        }
+    })
+}
+
+#[allow(dead_code)]
+#[inline]
+pub fn alecraft_logo(ui: &mut egui::Ui, size: f32) -> Response {
+    alepdf_logo(ui, size)
 }
 
 /// Buttons for every community link (`pdfcraft_engine::links`), Discord first and prominent.
 /// Returns the registry command of the one clicked.
+#[allow(dead_code)]
 pub fn community_links(ui: &mut egui::Ui) -> Option<&'static str> {
     let mut clicked = None;
     ui.horizontal_wrapped(|ui| {
