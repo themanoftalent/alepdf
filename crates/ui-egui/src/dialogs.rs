@@ -1326,23 +1326,6 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                 });
             }
             Dialog::About => {
-                // Tabs About · Contributors · Models (craftrules standards/contributors.md).
-                let tab_id = egui::Id::unique("about_tab");
-                let mut tab = ui.data_mut(|d| d.get_temp::<u8>(tab_id)).unwrap_or(0);
-                ui.horizontal_wrapped(|ui| {
-                    for (i, label) in ["About", "Contributors", "Models"].into_iter().enumerate() {
-                        let i = i as u8;
-                        if widgets::mode_tab(ui, tl!(label), tab == i).clicked() {
-                            tab = i;
-                        }
-                    }
-                });
-                ui.data_mut(|d| d.insert_temp(tab_id, tab));
-                ui.separator();
-                match tab {
-                    1 => crate::credits::contributors_ui(ui),
-                    2 => crate::credits::models_ui(ui),
-                    _ => {
                         ui.vertical_centered(|ui| {
                             widgets::alepdf_logo(ui, 56.0);
                             ui.add_space(6.0);
@@ -1419,8 +1402,6 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                                     }
                                 });
                             });
-                    }
-                }
             }
         }
         ui.add_space(16.0);
