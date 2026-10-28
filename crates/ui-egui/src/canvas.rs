@@ -1256,6 +1256,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     let allowed = doc.allows_annotation();
     let can_copy = doc.allows_copying();
     let mut copy_selected = false;
+    let mut export_all_images = false;
     let comments_hidden = doc.comments_hidden();
     let form = doc.form.clone();
     let generation = doc.edit_generation();
@@ -2246,12 +2247,20 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
                     }
                 };
                 if let Some(image) = hit {
+                    if ui.button(tl!("Save Image As…")).clicked() {
+                        copy_image = Some(comments::CanvasAction::SaveImage(page, image));
+                        ui.close();
+                    }
                     if ui.button(tl!("Copy Image")).clicked() {
                         copy_image = Some(comments::CanvasAction::CopyImage(page, image));
                         ui.close();
                     }
                     if ui.button(tl!("Copy Image in Original Format")).clicked() {
                         copy_image = Some(comments::CanvasAction::CopyImageFile(page, image));
+                        ui.close();
+                    }
+                    if ui.button(tl!("Export All Images from PDF…")).clicked() {
+                        copy_image = Some(comments::CanvasAction::ExportAllImages);
                         ui.close();
                     }
                     ui.separator();
@@ -2499,8 +2508,10 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
             app.comments_panel_closed = false;
         }
         Some(comments::CanvasAction::Properties(p, i)) => open_props = Some((p, i)),
+        Some(comments::CanvasAction::SaveImage(p, i)) => image_action = Some(crate::edit_text_ui::ImageAction::Save(p, i)),
         Some(comments::CanvasAction::CopyImage(p, i)) => image_action = Some(crate::edit_text_ui::ImageAction::Copy(p, i)),
         Some(comments::CanvasAction::CopyImageFile(p, i)) => image_action = Some(crate::edit_text_ui::ImageAction::CopyFile(p, i)),
+        Some(comments::CanvasAction::ExportAllImages) => export_all_images = true,
         None => {}
     }
     // Full screen: the click turns the page unless it did something else first. It waits out the
@@ -2648,6 +2659,9 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     }
     if copy_selected {
         app.execute("edit.copy");
+    }
+    if export_all_images {
+        app.run_command("export.all_images");
     }
     // Read mode hides the tools (#2646), and full screen is the page and nothing else (#1459);
     // the quick tools come back with the window.

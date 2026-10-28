@@ -137,6 +137,10 @@ pub enum CanvasAction {
     CopyImage(usize, usize),
     /// Copy Image in Original Format: the same image as a file (JPEG as stored, else PNG).
     CopyImageFile(usize, usize),
+    /// Save Image As: image to a file.
+    SaveImage(usize, usize),
+    /// Export all images from document.
+    ExportAllImages,
 }
 
 /// How many custom colours the "Recent colours" row keeps.
