@@ -10,6 +10,14 @@ use crate::{PdfCraftApp, theme, widgets};
 /// Where every AlePdf release is listed.
 pub const RELEASES_PAGE: &str = "https://github.com/themanoftalent/alepdf/releases";
 
+#[cfg(not(target_arch = "wasm32"))]
+pub static ALEPDF_APP: craft_update::App = craft_update::App::new(
+    "alepdf",
+    "AlePdf",
+    "Reading, organizing and protecting PDFs",
+    "themanoftalent/alepdf",
+);
+
 /// Stands in for the network in tests.
 #[cfg(not(target_arch = "wasm32"))]
 pub type UpdateSource = CheckSource;
@@ -19,7 +27,7 @@ pub(crate) struct Updates {
     updater: Updater,
     /// The Updates dialog is showing.
     pub(crate) open: bool,
-    /// Ask for a newer release at start; the desktop app turns it on, so tests never reach the network.
+    /// Ask for a newer release at start; disabled by default to prevent unwanted upstream updates.
     #[cfg(not(target_arch = "wasm32"))]
     startup_check: bool,
     #[cfg(not(target_arch = "wasm32"))]
@@ -30,7 +38,7 @@ impl Default for Updates {
     fn default() -> Self {
         Self {
             #[cfg(not(target_arch = "wasm32"))]
-            updater: Updater::new(&craft_update::suite::PDFCRAFT, env!("CARGO_PKG_VERSION")),
+            updater: Updater::new(&ALEPDF_APP, env!("CARGO_PKG_VERSION")),
             open: false,
             #[cfg(not(target_arch = "wasm32"))]
             startup_check: false,
@@ -41,7 +49,7 @@ impl Default for Updates {
 }
 
 impl PdfCraftApp {
-    /// Whether the app asks for a newer release on its first frame (off until the desktop app turns it on).
+    /// Whether the app asks for a newer release on its first frame (disabled for AlePdf).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn set_startup_update_check(&mut self, on: bool) {
         self.updates.startup_check = on;
@@ -50,7 +58,7 @@ impl PdfCraftApp {
     /// Replaces the network with `source` (tests).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn set_update_source(&mut self, source: UpdateSource) {
-        self.updates.updater = Updater::new(&craft_update::suite::PDFCRAFT, env!("CARGO_PKG_VERSION")).with_source(source);
+        self.updates.updater = Updater::new(&ALEPDF_APP, env!("CARGO_PKG_VERSION")).with_source(source);
     }
 
     /// Help ▸ Check for updates: ask for the latest release and show the outcome.
