@@ -575,6 +575,19 @@ pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
     )
 }
 
+/// The AlePdf app logo, `size` points square.
+pub fn alepdf_logo(ui: &mut egui::Ui, size: f32) -> Response {
+    ui.add(
+        egui::Image::from_bytes(
+            "bytes://alepdf-logo.png",
+            include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png"),
+        )
+        .fit_to_exact_size(vec2(size, size))
+        .corner_radius(CornerRadius::same((size * 0.22) as u8))
+        .alt_text("AlePdf"),
+    )
+}
+
 /// Buttons for every community link (`pdfcraft_engine::links`), Discord first and prominent.
 /// Returns the registry command of the one clicked.
 pub fn community_links(ui: &mut egui::Ui) -> Option<&'static str> {
