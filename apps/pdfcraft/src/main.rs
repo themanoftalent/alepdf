@@ -58,12 +58,12 @@ const APP_ICON_PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256
 /// What `-h` / `--help` prints (#4076): a hint, not the full option list (that is this file's
 /// doc comment and the README). Scripts want `pdfcraft-cli`, which never opens a window.
 const USAGE: &str = "\
-Usage: alepdf [options] [files…]
+Usage: alecraft [options] [files…]
 
-Opens the files in the AlePdf desktop app.
+Opens the files in the AleCraft desktop app.
 
 Options:
-  --new-window                open a window of its own instead of passing the files to a running AlePdf
+  --new-window                open a window of its own instead of passing the files to a running AleCraft
   --create-images [images…]   put the images in one PDF and ask for the page DPI
   --control <file>            enable the UI control channel (pdfcraft-cli ui --control <file> …)
   --page N, --zoom 150, --layout continuous, --theme dark, …
@@ -88,7 +88,7 @@ const LEGACY_STORAGE_KEY: &str = "printcraft";
 /// it is `PdfCraftData` beside the executable (#157). XDG desktops use the configuration base;
 /// other platforms retain eframe's PdfCraft folder. Logs and recovery stay in the data folder.
 fn settings_dir() -> Option<std::path::PathBuf> {
-    let legacy = eframe::storage_dir("AlePdf").or_else(|| eframe::storage_dir("PdfCraft"));
+    let legacy = eframe::storage_dir("AleCraft").or_else(|| eframe::storage_dir("PdfCraft"));
     match settings::directory(
         cfg!(all(unix, not(target_os = "macos"))),
         pdfcraft_ui_egui::portable::data_dir(),
@@ -105,7 +105,7 @@ fn settings_dir() -> Option<std::path::PathBuf> {
 }
 
 /// Move the settings and crash-recovery folders of the app's former names (PrintCraft, PdfCraft)
-/// to AlePdf once, so an upgrade keeps recent files, preferences and unsaved work. Best effort: a
+/// to AleCraft once, so an upgrade keeps recent files, preferences and unsaved work. Best effort: a
 /// folder is left alone when the new one already exists or the move fails. A portable copy leaves
 /// the per-user folders alone.
 fn migrate_legacy_folders() {
@@ -113,14 +113,14 @@ fn migrate_legacy_folders() {
         return;
     }
     let mut moves = vec![
-        (eframe::storage_dir("PrintCraft"), eframe::storage_dir("AlePdf")),
-        (eframe::storage_dir("PdfCraft"), eframe::storage_dir("AlePdf")),
+        (eframe::storage_dir("PrintCraft"), eframe::storage_dir("AleCraft")),
+        (eframe::storage_dir("PdfCraft"), eframe::storage_dir("AleCraft")),
     ];
     // Recovery lives in the settings folder except on Windows, where it is under %LOCALAPPDATA%.
     if cfg!(windows) {
         let local = std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()).map(std::path::PathBuf::from);
-        moves.push((local.as_ref().map(|d| d.join("PrintCraft")), local.as_ref().map(|d| d.join("AlePdf"))));
-        moves.push((local.as_ref().map(|d| d.join("PdfCraft")), local.map(|d| d.join("AlePdf"))));
+        moves.push((local.as_ref().map(|d| d.join("PrintCraft")), local.as_ref().map(|d| d.join("AleCraft"))));
+        moves.push((local.as_ref().map(|d| d.join("PdfCraft")), local.map(|d| d.join("AleCraft"))));
     }
     for (old, new) in moves {
         let (Some(old), Some(new)) = (old, new) else { continue };
@@ -230,7 +230,7 @@ fn main() -> eframe::Result {
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
-            "--version" => return print_and_exit(&format!("alepdf {}", pdfcraft_engine::build_info::version())),
+            "--version" => return print_and_exit(&format!("alecraft {}", pdfcraft_engine::build_info::version())),
             // Before any window or log file, so a scripted call returns (#4076).
             "-h" | "--help" => return print_and_exit(USAGE),
             "--control" => control_file = args.next(),
@@ -252,16 +252,16 @@ fn main() -> eframe::Result {
     // no file behind) and after the PrintCraft migration (which a fresh folder would block).
     // Records logged until now are written to it first.
     if let (Some(logger), Some(dir)) =
-        (logger, pdfcraft_ui_egui::portable::data_dir().map(std::path::Path::to_path_buf).or_else(|| eframe::storage_dir("AlePdf")))
+        (logger, pdfcraft_ui_egui::portable::data_dir().map(std::path::Path::to_path_buf).or_else(|| eframe::storage_dir("AleCraft")))
     {
         match logger.attach_dir(&dir.join("logs")) {
-            Ok(path) => log::info!("AlePdf {}, log file {}", pdfcraft_engine::build_info::version(), path.display()),
+            Ok(path) => log::info!("AleCraft {}, log file {}", pdfcraft_engine::build_info::version(), path.display()),
             // Standard error only by now (`attach_dir` gave up on the file); unlike `eprintln!`, never panics.
             Err(e) => log::warn!("no log file: {e}"),
         }
     }
     // Windows, Linux and the BSDs: a launch that only names files (an Outlook attachment, an
-    // Explorer double-click, a file manager or `xdg-open`) hands them to the AlePdf already
+    // Explorer double-click, a file manager or `xdg-open`) hands them to the AleCraft already
     // running and exits (#282, #317, #1726). Any option means the caller wants this launch's own
     // window.
     let may_hand_off = !new_window && !files.is_empty() && options.is_empty() && control_file.is_none() && !create_images;
@@ -283,7 +283,7 @@ fn main() -> eframe::Result {
     let started = Rc::new(Cell::new(false));
     let first = if choice == RendererChoice::Gl { eframe::Renderer::Glow } else { eframe::Renderer::Wgpu };
     let result = eframe::run_native(
-        "AlePdf",
+        "AleCraft",
         native_options(launch.integrated, launch.window_controls.is_some(), first),
         app_creator(
             launch.clone(),
@@ -301,7 +301,7 @@ fn main() -> eframe::Result {
             // usually still works there, so that's better than quitting.
             log::error!("the GPU renderer (wgpu) didn't start: {e}. Starting with OpenGL instead; set PDFCRAFT_RENDERER=gl to skip wgpu.");
             eframe::run_native(
-                "AlePdf",
+                "AleCraft",
                 native_options(launch.integrated, launch.window_controls.is_some(), eframe::Renderer::Glow),
                 app_creator(
                     launch,
@@ -344,7 +344,7 @@ fn retry_with_gl(choice: RendererChoice, app_started: bool) -> bool {
 /// The window and renderer settings for one run.
 fn native_options(integrated: bool, app_frame: bool, renderer: eframe::Renderer) -> eframe::NativeOptions {
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("AlePdf")
+        .with_title("AleCraft")
         .with_inner_size([1440.0, 920.0])
         .with_min_inner_size([820.0, 520.0])
         .with_drag_and_drop(true)

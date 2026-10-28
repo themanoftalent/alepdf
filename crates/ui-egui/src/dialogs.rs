@@ -1255,7 +1255,7 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                     ui.label(egui::RichText::new(tl!("Recover unsaved documents?")).font(theme::semibold(18.0)));
                 });
                 ui.add_space(6.0);
-                ui.label(tl!("AlePdf didn't shut down normally. These documents had changes that were autosaved:"));
+                ui.label(tl!("AleCraft didn't shut down normally. These documents had changes that were autosaved:"));
                 ui.add_space(8.0);
                 let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
                 egui::Grid::new("recoverable").num_columns(2).spacing([18.0, 6.0]).show(ui, |ui| {
@@ -1344,9 +1344,10 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                     2 => crate::credits::models_ui(ui),
                     _ => {
                         ui.horizontal(|ui| {
-                            widgets::alepdf_logo(ui, 44.0);
+                            widgets::alecraft_logo(ui, 48.0);
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new("AlePdf").font(theme::semibold(20.0)));
+                                ui.label(egui::RichText::new("AleCraft").font(theme::semibold(20.0)));
+                                ui.label(egui::RichText::new("Professional PDF Editor for macOS").color(t.text_muted).small());
                                 ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
                             });
                         });

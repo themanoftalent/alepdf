@@ -1,0 +1,50 @@
+name: Build & Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    name: Build macOS Universal DMG
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Tests
+        run: |
+          cargo test -p pdfcraft --lib --tests
+
+      - name: Package Universal macOS App & DMG
+        run: |
+          chmod +x packaging/macos/package.sh packaging/env.sh
+          ./packaging/macos/package.sh --arch universal
+
+      - name: Upload AleCraft DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: AleCraft-Universal-DMG
+          path: dist/release/AleCraft.dmg
+          if-no-files-found: error
+
+      - name: Upload AleCraft App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: AleCraft-App-Bundle
+          path: target/macos-package/AleCraft.app
+          if-no-files-found: error
