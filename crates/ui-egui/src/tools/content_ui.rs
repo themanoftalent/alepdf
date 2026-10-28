@@ -644,12 +644,75 @@ pub(crate) fn editor(ctx: &egui::Context, view: &mut DocView, info: &DocInfo, ad
                     .fill(tokens.card)
                     .stroke(Stroke::new(1.0, tokens.border))
                     .corner_radius(CornerRadius::same(6))
-                    .inner_margin(2)
+                    .inner_margin(3)
                     .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(2.0, 2.0);
+                        ui.spacing_mut().item_spacing = egui::vec2(3.0, 2.0);
                         ui.horizontal(|ui| {
-                            done = crate::icons::button(ui, "check", 24.0, false, tl!("Done adding text")).clicked();
-                            cancel = crate::icons::button(ui, "x", 24.0, false, tl!("Discard this text (Esc)")).clicked();
+                            // Font family
+                            egui::ComboBox::from_id_salt("added_text_font")
+                                .selected_text(t.style.family.label())
+                                .width(88.0)
+                                .show_ui(ui, |ui| {
+                                    for f in [
+                                        pdfcraft_engine::FontFamily::Helvetica,
+                                        pdfcraft_engine::FontFamily::Times,
+                                        pdfcraft_engine::FontFamily::Courier,
+                                    ] {
+                                        if ui.selectable_value(&mut t.style.family, f, f.label()).clicked() {
+                                            ctx.request_repaint();
+                                        }
+                                    }
+                                });
+
+                            // Font size
+                            egui::ComboBox::from_id_salt("added_text_size")
+                                .selected_text(format!("{:.0}", t.style.size))
+                                .width(46.0)
+                                .show_ui(ui, |ui| {
+                                    for &s in &[8.0, 9.0, 10.0, 11.0, 12.0, 14.0, 16.0, 18.0, 20.0, 24.0, 28.0, 36.0, 48.0, 72.0] {
+                                        if ui.selectable_value(&mut t.style.size, s, format!("{s:.0}")).clicked() {
+                                            ctx.request_repaint();
+                                        }
+                                    }
+                                });
+
+                            if crate::icons::button(ui, "minus", 18.0, false, tl!("Decrease font size")).clicked() {
+                                t.style.size = (t.style.size - 1.0).max(4.0);
+                                ctx.request_repaint();
+                            }
+                            if crate::icons::button(ui, "plus", 18.0, false, tl!("Increase font size")).clicked() {
+                                t.style.size = (t.style.size + 1.0).min(144.0);
+                                ctx.request_repaint();
+                            }
+
+                            if crate::icons::button(ui, "bold", 22.0, t.style.bold, tl!("Bold")).clicked() {
+                                t.style.bold = !t.style.bold;
+                                ctx.request_repaint();
+                            }
+                            if crate::icons::button(ui, "italic", 22.0, t.style.italic, tl!("Italic")).clicked() {
+                                t.style.italic = !t.style.italic;
+                                ctx.request_repaint();
+                            }
+
+                            // Color swatch
+                            let (swatch_rect, swatch_resp) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::click());
+                            let [cr, cg, cb] = t.style.color.map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                            let fill = swatch_rect.shrink(2.0);
+                            ui.painter().rect_filled(fill, CornerRadius::same(2), Color32::from_rgb(cr, cg, cb));
+                            ui.painter().rect_stroke(fill, CornerRadius::same(2), Stroke::new(1.0, if swatch_resp.hovered() { tokens.text } else { tokens.border }), egui::StrokeKind::Outside);
+                            egui::Popup::menu(&swatch_resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+                                if let Some(picked) = crate::comments::swatch_grid(ui, Some(t.style.color)) {
+                                    t.style.color = picked;
+                                    ctx.request_repaint();
+                                    ui.close();
+                                }
+                            });
+
+                            let (sep, _) = ui.allocate_exact_size(egui::vec2(4.0, 18.0), egui::Sense::hover());
+                            ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                            done = crate::icons::button(ui, "check", 22.0, false, tl!("Done adding text")).clicked();
+                            cancel = crate::icons::button(ui, "x", 22.0, false, tl!("Discard this text (Esc)")).clicked();
                         });
                     })
                     .response

@@ -556,6 +556,8 @@ pub enum ViewAction {
     CameraLevel,
     /// After Enhance page: leave the tool for this command (Crop pages, Organize pages).
     CameraNext(&'static str),
+    /// Open the format text panel in the left sidebar.
+    OpenFormatPanel,
 }
 
 impl DocView {
@@ -1293,6 +1295,9 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
         crate::prepare::after_refresh(view, &form);
     } else {
         view.prepare.selected = None;
+    }
+    if view.line_editor.is_some() && app.left != crate::LeftPanel::Tool("edit") {
+        app.left = crate::LeftPanel::Tool("edit");
     }
     view.objects.prepare(doc, tool == QuickTool::EditText && can_modify, ui.ctx());
     view.text_background.prepare(ui.ctx(), doc, view.line_editor.as_ref(), view.content.draft.as_ref(), scale);

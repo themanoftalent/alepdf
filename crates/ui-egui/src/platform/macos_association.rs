@@ -7,7 +7,7 @@ use std::{io, path::Path};
 
 const OPEN_WITH: &str = "com.apple.LaunchServices.OpenWith";
 const QUARANTINE: &str = "com.apple.quarantine";
-const BUNDLE_ID: &str = "ai.storyteller.pdfcraft";
+const BUNDLE_ID: &str = "com.alepdf.editor";
 const MAX_ATTRIBUTE: usize = 64 * 1024;
 
 /// A bounded snapshot used only to decide whether native association recovery is eligible.
@@ -84,7 +84,10 @@ fn points_to_this_app(data: &[u8], app: &Path) -> bool {
         bundleidentifier: Option<String>,
     }
     let Ok(binding) = plist::from_bytes::<Binding>(data) else { return false };
-    if binding.version != 0 || binding.bundleidentifier.as_deref().is_some_and(|id| id != BUNDLE_ID) || !Path::new(&binding.path).is_absolute() {
+    if binding.version != 0
+        || binding.bundleidentifier.as_deref().is_some_and(|id| id != BUNDLE_ID && id != "ai.storyteller.pdfcraft")
+        || !Path::new(&binding.path).is_absolute()
+    {
         return false;
     }
     // Exact native spelling is intentionally conservative. Never resolve an untrusted path:

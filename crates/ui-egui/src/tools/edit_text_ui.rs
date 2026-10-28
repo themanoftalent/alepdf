@@ -12,7 +12,9 @@ use pdfcraft_engine::{Edit, ObjectKind, ObjectTarget};
 use pdfcraft_render::DocInfo;
 
 use crate::canvas::{DocView, PageXform};
+use crate::icons;
 use crate::page_pointer::PagePointer;
+use crate::theme::Tokens;
 
 mod background;
 mod image;
@@ -492,6 +494,24 @@ pub(crate) fn page_input(
     true
 }
 
+const SIZES: [f64; 14] = [8.0, 9.0, 10.0, 11.0, 12.0, 14.0, 16.0, 18.0, 20.0, 24.0, 28.0, 36.0, 48.0, 72.0];
+
+fn number_fmt(v: f64) -> String {
+    let s = format!("{v:.1}");
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
+fn floating_color_button(ui: &mut egui::Ui, t: &Tokens, color: [f64; 3]) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(22.0, 22.0), egui::Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("Text color")));
+    let [r, g, b] = color.map(|v| (v.clamp(0.0, 1.0) * 255.0).round() as u8);
+    let fill = rect.shrink(3.0);
+    ui.painter().rect_filled(fill, CornerRadius::same(3), Color32::from_rgb(r, g, b));
+    let stroke = if resp.hovered() { t.text } else { t.border };
+    ui.painter().rect_stroke(fill, CornerRadius::same(3), Stroke::new(1.0, stroke), egui::StrokeKind::Outside);
+    crate::theme::hand(resp).on_hover_text(tl!("Text color"))
+}
+
 /// The inline editor; returns the edit once the text is applied.
 pub(crate) fn overlay(ctx: &egui::Context, view: &mut DocView, info: &DocInfo) -> Option<Edit> {
     // Clicks outside the document (the Format text panel) keep the paragraph open. Where the
@@ -545,6 +565,188 @@ pub(crate) fn overlay(ctx: &egui::Context, view: &mut DocView, info: &DocInfo) -
     let mut done = None;
     let mut reveal = false;
     let mut look = None;
+    let tokens = Tokens::get(ctx);
+
+    // Floating format toolbar positioned right above the text block (or below if at the top).
+    let tb_w = 420.0;
+    let tb_h = 36.0;
+    let tb_margin = 8.0;
+    let tb_x = ed.rect.left().clamp(viewport.left() + 6.0, (viewport.right() - tb_w - 6.0).max(viewport.left() + 6.0));
+    let tb_y = if ed.rect.top() - tb_h - tb_margin >= viewport.top() + 4.0 {
+        ed.rect.top() - tb_h - tb_margin
+    } else {
+        ed.rect.bottom() + tb_margin
+    };
+    let tb_pos = Pos2::new(tb_x, tb_y);
+    let mut toolbar_rect = Rect::NOTHING;
+
+    egui::Area::new(egui::Id::unique("edit-text-floating-toolbar"))
+        .order(egui::Order::Foreground)
+        .fade_in(false)
+        .fixed_pos(tb_pos)
+        .show(ctx, |ui| {
+            let frame = egui::Frame::NONE
+                .fill(tokens.card)
+                .stroke(Stroke::new(1.0, tokens.border))
+                .corner_radius(CornerRadius::same(8))
+                .shadow(egui::Shadow {
+                    offset: [0, 4],
+                    blur: 16,
+                    spread: 0,
+                    color: Color32::from_black_alpha(if tokens.dark() { 90 } else { 30 }),
+                })
+                .inner_margin(egui::Margin::symmetric(6, 4));
+
+            let frame_res = frame.show(ui, |ui| {
+                ui.spacing_mut().item_spacing = egui::vec2(3.0, 0.0);
+                ui.horizontal(|ui| {
+                    // 1. Font family
+                    let sources: Vec<(String, String)> = ed.fonts.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                    let current_font_name = ed.font_shown(&sources);
+                    egui::ComboBox::from_id_salt("floating_text_font")
+                        .selected_text(current_font_name.as_str())
+                        .width(110.0)
+                        .show_ui(ui, |ui| {
+                            if ed.source.is_some() {
+                                if ui.selectable_label(false, tl!("Keep source fonts")).clicked() {
+                                    ed.keep_source_font();
+                                    ctx.request_repaint();
+                                }
+                                for (resource, face) in &sources {
+                                    if ui.selectable_label(false, face).clicked() {
+                                        ed.font_resource = Some(resource.clone());
+                                        ed.family_chosen = false;
+                                        ctx.request_repaint();
+                                    }
+                                }
+                                ui.separator();
+                            }
+                            for (family, label) in [
+                                (pdfcraft_engine::FontFamily::Helvetica, "Helvetica"),
+                                (pdfcraft_engine::FontFamily::Times, "Times New Roman"),
+                                (pdfcraft_engine::FontFamily::Courier, "Courier"),
+                            ] {
+                                let active = ed.look.family == family && (ed.family_chosen || ed.source.is_none());
+                                if ui.selectable_label(active, label).clicked() {
+                                    ed.choose_family(family);
+                                    ctx.request_repaint();
+                                }
+                            }
+                        })
+                        .response
+                        .on_hover_text(tl!("Font Family"));
+
+                    // 2. Font size ComboBox + Steppers
+                    let current_size_str = number_fmt(ed.look.size);
+                    egui::ComboBox::from_id_salt("floating_text_size")
+                        .selected_text(current_size_str.as_str())
+                        .width(48.0)
+                        .show_ui(ui, |ui| {
+                            for &s in &SIZES {
+                                if ui.selectable_value(&mut ed.look.size, s, number_fmt(s)).clicked() {
+                                    ctx.request_repaint();
+                                }
+                            }
+                        })
+                        .response
+                        .on_hover_text(tl!("Font Size (pt)"));
+
+                    if icons::button(ui, "minus", 20.0, false, tl!("Decrease font size (-1pt)")).clicked() {
+                        ed.look.size = (ed.look.size - 1.0).max(4.0);
+                        ctx.request_repaint();
+                    }
+                    if icons::button(ui, "plus", 20.0, false, tl!("Increase font size (+1pt)")).clicked() {
+                        ed.look.size = (ed.look.size + 1.0).min(144.0);
+                        ctx.request_repaint();
+                    }
+
+                    let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
+                    ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                    // 3. Bold, Italic, Underline
+                    if icons::button(ui, "bold", 24.0, ed.look.bold, tl!("Bold (⌘B)")).clicked() {
+                        ed.look.bold = !ed.look.bold;
+                        ctx.request_repaint();
+                    }
+                    if icons::button(ui, "italic", 24.0, ed.look.italic, tl!("Italic (⌘I)")).clicked() {
+                        ed.look.italic = !ed.look.italic;
+                        ctx.request_repaint();
+                    }
+                    if icons::button(ui, "underline", 24.0, ed.extras.underline, tl!("Underline (⌘U)")).clicked() {
+                        ed.extras.underline = !ed.extras.underline;
+                        ctx.request_repaint();
+                    }
+
+                    let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
+                    ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                    // 4. Color Swatch
+                    let swatch = floating_color_button(ui, &tokens, ed.look.color);
+                    egui::Popup::menu(&swatch).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+                        if let Some(picked) = crate::comments::swatch_grid(ui, Some(ed.look.color)) {
+                            ed.look.color = picked;
+                            ctx.request_repaint();
+                            ui.close();
+                        }
+                    });
+
+                    let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
+                    ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                    // 5. Alignment
+                    let cur_align_icon = match ed.look.align {
+                        pdfcraft_engine::TextAlign::Left => "align-left",
+                        pdfcraft_engine::TextAlign::Center => "align-center",
+                        pdfcraft_engine::TextAlign::Right => "align-right",
+                        pdfcraft_engine::TextAlign::Justify => "align-justify",
+                    };
+                    let align_btn = icons::button(ui, cur_align_icon, 24.0, false, tl!("Text Alignment"));
+                    egui::Popup::menu(&align_btn).show(|ui| {
+                        ui.horizontal(|ui| {
+                            if icons::button(ui, "align-left", 24.0, ed.look.align == pdfcraft_engine::TextAlign::Left, tl!("Align Left")).clicked() {
+                                ed.look.align = pdfcraft_engine::TextAlign::Left;
+                                ctx.request_repaint();
+                                ui.close();
+                            }
+                            if icons::button(ui, "align-center", 24.0, ed.look.align == pdfcraft_engine::TextAlign::Center, tl!("Center")).clicked() {
+                                ed.look.align = pdfcraft_engine::TextAlign::Center;
+                                ctx.request_repaint();
+                                ui.close();
+                            }
+                            if icons::button(ui, "align-right", 24.0, ed.look.align == pdfcraft_engine::TextAlign::Right, tl!("Align Right")).clicked() {
+                                ed.look.align = pdfcraft_engine::TextAlign::Right;
+                                ctx.request_repaint();
+                                ui.close();
+                            }
+                        });
+                    });
+
+                    // 6. Sidebar format panel shortcut button
+                    if icons::button(ui, "panel-left", 24.0, false, tl!("Open full Format panel in sidebar")).clicked() {
+                        view.pending_action = Some(crate::canvas::ViewAction::OpenFormatPanel);
+                    }
+
+                    let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
+                    ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                    // 7. Done (check) and Discard (x)
+                    if icons::button(ui, "check", 24.0, false, tl!("Apply changes (⌘Enter)")).clicked() {
+                        done = Some(true);
+                    }
+                    if icons::button(ui, "x", 24.0, false, tl!("Discard changes (Esc)")).clicked() {
+                        done = Some(false);
+                    }
+                });
+            });
+            toolbar_rect = frame_res.response.rect;
+        });
+
+    let interact_pos = ctx.input(|i| i.pointer.interact_pos());
+    let on_toolbar = interact_pos.is_some_and(|p| toolbar_rect.expand(10.0).contains(p));
+    if on_toolbar {
+        view.objects.hold_editor = true;
+    }
+
     // No fade-in: while it faded, the page's own copy of the text showed through the cover.
     // Over the page, so only where the document shows: a paragraph scrolled under the mode bar or
     // a side panel must leave them their pointer (#2755). It stays at its paragraph, cut off as
@@ -635,7 +837,67 @@ pub(crate) fn overlay(ctx: &egui::Context, view: &mut DocView, info: &DocInfo) -
                     let byte = |index| ed.text.char_indices().nth(index).map_or(ed.text.len(), |(at, _)| at);
                     ed.selection = (!selected.is_empty()).then(|| byte(selected.start.into())..byte(selected.end.into()));
                 }
+                // Keyboard shortcuts for quick styling
+                if ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::B)) {
+                    ed.look.bold = !ed.look.bold;
+                    ctx.request_repaint();
+                }
+                if ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::I)) {
+                    ed.look.italic = !ed.look.italic;
+                    ctx.request_repaint();
+                }
+                if ui.input(|i| i.modifiers.command && i.key_pressed(egui::Key::U)) {
+                    ed.extras.underline = !ed.extras.underline;
+                    ctx.request_repaint();
+                }
+
                 let r = output.response;
+                r.context_menu(|ui| {
+                    ui.menu_button(tl!("Font Size"), |ui| {
+                        for &s in &[8.0, 9.0, 10.0, 11.0, 12.0, 14.0, 16.0, 18.0, 20.0, 24.0, 28.0, 36.0, 48.0, 72.0] {
+                            if ui.selectable_label(ed.look.size == s, format!("{s:.0} pt")).clicked() {
+                                ed.look.size = s;
+                                ctx.request_repaint();
+                                ui.close();
+                            }
+                        }
+                    });
+                    ui.menu_button(tl!("Font Family"), |ui| {
+                        if ed.source.is_some() && ui.selectable_label(!ed.family_chosen && ed.font_resource.is_none(), tl!("Keep source fonts")).clicked() {
+                            ed.keep_source_font();
+                            ctx.request_repaint();
+                            ui.close();
+                        }
+                        for (f, name) in [
+                            (pdfcraft_engine::FontFamily::Helvetica, "Helvetica"),
+                            (pdfcraft_engine::FontFamily::Times, "Times New Roman"),
+                            (pdfcraft_engine::FontFamily::Courier, "Courier"),
+                        ] {
+                            if ui.selectable_label(ed.look.family == f && ed.family_chosen, name).clicked() {
+                                ed.choose_family(f);
+                                ctx.request_repaint();
+                                ui.close();
+                            }
+                        }
+                    });
+                    ui.separator();
+                    if ui.selectable_label(ed.look.bold, tl!("Bold")).clicked() {
+                        ed.look.bold = !ed.look.bold;
+                        ctx.request_repaint();
+                        ui.close();
+                    }
+                    if ui.selectable_label(ed.look.italic, tl!("Italic")).clicked() {
+                        ed.look.italic = !ed.look.italic;
+                        ctx.request_repaint();
+                        ui.close();
+                    }
+                    if ui.selectable_label(ed.extras.underline, tl!("Underline")).clicked() {
+                        ed.extras.underline = !ed.extras.underline;
+                        ctx.request_repaint();
+                        ui.close();
+                    }
+                });
+
                 if r.changed() {
                     // The next pass measures the updated draft with the Apply/Save rewrite.
                     ctx.request_repaint();
@@ -649,7 +911,7 @@ pub(crate) fn overlay(ctx: &egui::Context, view: &mut DocView, info: &DocInfo) -
                 let apply = ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.command);
                 if esc {
                     done = Some(false);
-                } else if apply || (lost && !outside && !hold) {
+                } else if apply || (lost && !outside && !hold && !on_toolbar) {
                     done = Some(true);
                 }
             });
