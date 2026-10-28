@@ -39,9 +39,9 @@ export MACOSX_DEPLOYMENT_TARGET=11.0
 IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 SHORT_VERSION="${VERSION%%-*}"
 WORK="$CARGO_TARGET_DIR/macos-package"
-APP="$WORK/AleCraft.app"
-DMG="$DIST/AleCraft.dmg"
-CLI_ZIP="$DIST/alecraft-cli-$VERSION-macos-$ARCH.zip"
+APP="$WORK/AlePdf.app"
+DMG="$DIST/AlePdf.dmg"
+CLI_ZIP="$DIST/alepdf-cli-$VERSION-macos-$ARCH.zip"
 
 NOTARIZE=0
 if [[ "$IDENTITY" = "-" ]]; then
@@ -52,7 +52,7 @@ else
   warn "macOS: APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID incomplete; signed but not notarized"
 fi
 
-echo "==> AleCraft $VERSION for macOS ($ARCH), identity: $IDENTITY, notarize: $NOTARIZE"
+echo "==> AlePdf $VERSION for macOS ($ARCH), identity: $IDENTITY, notarize: $NOTARIZE"
 
 # ---- build -------------------------------------------------------------------------------------
 if [[ "$SKIP_BUILD" = 0 ]]; then
@@ -63,7 +63,7 @@ fi
 
 rm -rf "$WORK"
 mkdir -p "$WORK/bin"
-for bin in alecraft pdfcraft-cli; do
+for bin in alepdf pdfcraft-cli; do
   inputs=()
   for t in "${TARGETS[@]}"; do inputs+=("$CARGO_TARGET_DIR/$t/release/$bin"); done
   lipo -create -output "$WORK/bin/$bin" "${inputs[@]}"
@@ -97,15 +97,15 @@ notarize() {
   fi
 }
 
-# ---- AleCraft.app ----------------------------------------------------------------------------
+# ---- AlePdf.app ----------------------------------------------------------------------------
 echo "==> assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # Executable and icon carry the display name (CFBundleExecutable / CFBundleIconFile).
-cp "$WORK/bin/alecraft" "$APP/Contents/MacOS/AleCraft"
-cp "$ROOT/assets/app-icon/pdfcraft.icns" "$APP/Contents/Resources/AleCraft.icns"
+cp "$WORK/bin/alepdf" "$APP/Contents/MacOS/AlePdf"
+cp "$ROOT/assets/app-icon/pdfcraft.icns" "$APP/Contents/Resources/AlePdf.icns"
 # Required embedded-font notices are independent of optional font inputs.
 cp "$ROOT/NOTICE" "$APP/Contents/Resources/NOTICE"
-# The standard About panel (AleCraft menu > About AleCraft) shows Credits.rtf under the version.
+# The standard About panel (AlePdf menu > About AlePdf) shows Credits.rtf under the version.
 cp "$HERE/Credits.rtf" "$APP/Contents/Resources/Credits.rtf"
 copy_font_licences "$APP/Contents/Resources"
 # OCR models: the app finds them at Contents/MacOS/../Resources/models. Before signing, so the
@@ -119,13 +119,13 @@ printf 'APPL????' >"$APP/Contents/PkgInfo"
 
 # Sign inside-out: nested code first, then the bundle itself (no --deep on the final signature).
 # Today the only nested code is the main executable; frameworks/helpers would be signed here too.
-sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/AleCraft"
+sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/AlePdf"
 sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP"
 codesign --verify --strict --deep --verbose=2 "$APP"
 
 if [[ "$NOTARIZE" = 1 ]]; then
-  ditto -c -k --keepParent "$APP" "$WORK/AleCraft-notarize.zip"
-  notarize "$WORK/AleCraft-notarize.zip"
+  ditto -c -k --keepParent "$APP" "$WORK/AlePdf-notarize.zip"
+  notarize "$WORK/AlePdf-notarize.zip"
   xcrun stapler staple "$APP"
   xcrun stapler validate "$APP"
   spctl --assess --type execute -vvv "$APP"
@@ -135,7 +135,7 @@ fi
 echo "==> building $DMG"
 STAGE="$WORK/dmg"
 mkdir -p "$STAGE"
-ditto "$APP" "$STAGE/AleCraft.app"
+ditto "$APP" "$STAGE/AlePdf.app"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
 # Usage: hdiutil_retry <what> <hdiutil args…>; tries five times with growing pauses.
@@ -151,7 +151,7 @@ hdiutil_retry() {
     sleep $((attempt * 10))
   done
 }
-hdiutil_retry create create -srcfolder "$STAGE" -volname "AleCraft" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$DMG"
+hdiutil_retry create create -srcfolder "$STAGE" -volname "AlePdf" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$DMG"
 sign "$DMG"
 codesign --verify --strict --verbose=2 "$DMG"
 # The app inside the image must still pass --strict, so a makehybrid-style regression can't ship.
@@ -159,7 +159,7 @@ MOUNT="$WORK/dmg-check"
 rm -rf "$MOUNT"
 mkdir -p "$MOUNT"
 hdiutil_retry attach attach -nobrowse -readonly -mountpoint "$MOUNT" "$DMG" >/dev/null
-if ! codesign --verify --strict --deep --verbose=2 "$MOUNT/AleCraft.app"; then
+if ! codesign --verify --strict --deep --verbose=2 "$MOUNT/AlePdf.app"; then
   hdiutil_retry detach detach "$MOUNT" >/dev/null || true
   exit 1
 fi

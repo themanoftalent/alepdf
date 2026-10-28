@@ -539,7 +539,7 @@ impl eframe::App for PdfCraftApp {
             .active
             .and_then(|i| crate::canvas::tab_label(self, i))
             .or_else(|| self.combine_showing().then(|| tl!("Combine files").to_owned()))
-            .map_or_else(|| "AleCraft".to_owned(), |name| format!("{name} — AleCraft"));
+            .map_or_else(|| "AlePdf".to_owned(), |name| format!("{name} — AlePdf"));
         if title != self.window_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.window_title = title;

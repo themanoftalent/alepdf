@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/app-icon/hicolor/256x256/apps/ai.storyteller.pdfcraft.png" width="128" height="128" alt="AleCraft Application Icon">
+  <img src="assets/app-icon/hicolor/256x256/apps/ai.storyteller.pdfcraft.png" width="128" height="128" alt="AlePdf Application Icon">
 </p>
 
-<h1 align="center">AleCraft</h1>
+<h1 align="center">AlePdf</h1>
 
 <p align="center">
   <b>Professional PDF Editor for macOS</b><br>
@@ -31,7 +31,7 @@
 
 ## Overview
 
-**AleCraft** is a desktop PDF editing application built for macOS (supporting both Apple Silicon `arm64` and Intel `x86_64`). Engineered with pure Rust, AleCraft delivers native desktop performance, instant file opening, continuous scrolling, and true PDF content editing without subscriptions, cloud dependencies, or artificial usage limits.
+**AlePdf** is a desktop PDF editing application built for macOS (supporting both Apple Silicon `arm64` and Intel `x86_64`). Engineered with pure Rust, AlePdf delivers native desktop performance, instant file opening, continuous scrolling, and true PDF content editing without subscriptions, cloud dependencies, or artificial usage limits.
 
 ### Core Principles
 
@@ -76,7 +76,7 @@
 
 ## Workspaces
 
-AleCraft organizes your document workflow into dedicated, distraction-free workspaces:
+AlePdf organizes your document workflow into dedicated, distraction-free workspaces:
 
 | Workspace | Purpose |
 |---|---|
@@ -95,18 +95,18 @@ AleCraft organizes your document workflow into dedicated, distraction-free works
 
 ### macOS (.dmg Installer)
 
-1. Download the latest release disk image: **`AleCraft.dmg`**.
-2. Double-click **`AleCraft.dmg`** to mount the installer.
-3. Drag **`AleCraft.app`** into your **`Applications`** folder.
-4. Launch **AleCraft** from Finder, Spotlight, or the Dock.
+1. Download the latest release disk image: **`AlePdf.dmg`**.
+2. Double-click **`AlePdf.dmg`** to mount the installer.
+3. Drag **`AlePdf.app`** into your **`Applications`** folder.
+4. Launch **AlePdf** from Finder, Spotlight, or the Dock.
 
-> **Note on Gatekeeper:** If running an ad-hoc local build, right-click `AleCraft.app` in `/Applications` and select **Open** on first launch, or approve it in *System Settings → Privacy & Security*.
+> **Note on Gatekeeper:** If running an ad-hoc local build, right-click `AlePdf.app` in `/Applications` and select **Open** on first launch, or approve it in *System Settings → Privacy & Security*.
 
 ---
 
 ## Building from Source
 
-Building AleCraft requires Rust 1.85+ and macOS command-line tools.
+Building AlePdf requires Rust 1.85+ and macOS command-line tools.
 
 ### 1. Prerequisites
 
@@ -120,8 +120,8 @@ rustup target add aarch64-apple-darwin x86_64-apple-darwin
 ### 2. Clone and Run
 
 ```bash
-git clone https://github.com/alecraft/alecraft.git
-cd alecraft
+git clone https://github.com/alepdf/alepdf.git
+cd alepdf
 
 # Run native desktop app in debug mode
 cargo run -p pdfcraft
@@ -132,7 +132,7 @@ cargo run --release -p pdfcraft
 
 ### 3. Package macOS Universal App & DMG
 
-The packaging script compiles both Apple Silicon (`arm64`) and Intel (`x86_64`) binaries, combines them via `lipo` into a universal Mach-O executable, creates `AleCraft.app`, and packages `AleCraft.dmg`:
+The packaging script compiles both Apple Silicon (`arm64`) and Intel (`x86_64`) binaries, combines them via `lipo` into a universal Mach-O executable, creates `AlePdf.app`, and packages `AlePdf.dmg`:
 
 ```bash
 chmod +x packaging/macos/package.sh packaging/env.sh
@@ -140,20 +140,20 @@ chmod +x packaging/macos/package.sh packaging/env.sh
 ```
 
 The resulting artifacts are placed in:
-- `dist/release/AleCraft.dmg` (macOS drag-to-install disk image)
-- `target/macos-package/AleCraft.app` (macOS application bundle)
-- `dist/release/alecraft-cli-*-macos-universal.zip` (command-line suite)
+- `dist/release/AlePdf.dmg` (macOS drag-to-install disk image)
+- `target/macos-package/AlePdf.app` (macOS application bundle)
+- `dist/release/alepdf-cli-*-macos-universal.zip` (command-line suite)
 
 ---
 
 ## Architecture
 
-AleCraft is built as a modular Cargo workspace ensuring strict separation of concerns between core PDF parsing, rendering, document security, and the graphical interface:
+AlePdf is built as a modular Cargo workspace ensuring strict separation of concerns between core PDF parsing, rendering, document security, and the graphical interface:
 
 ```
-AleCraft
+AlePdf
 ├── apps/
-│   ├── pdfcraft/           # AleCraft desktop application entry point & macOS lifecycle
+│   ├── pdfcraft/           # AlePdf desktop application entry point & macOS lifecycle
 │   └── pdfcraft-cli/       # Headless CLI & automation runner
 ├── crates/
 │   ├── cos/                # PDF object stream tokenizer, parser & repair engine
@@ -175,7 +175,7 @@ AleCraft
 
 ## License
 
-AleCraft is dual-licensed under:
+AlePdf is dual-licensed under:
 - **MIT License** ([LICENSE-MIT](LICENSE-MIT))
 - **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
 

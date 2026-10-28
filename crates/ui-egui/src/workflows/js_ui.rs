@@ -449,7 +449,7 @@ pub(crate) fn preferences_body(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tok
     ui.label(egui::RichText::new(tl!("For page sizes and margins.")).small().color(t.text_muted));
     // The web build has no file paths to reopen.
     #[cfg(not(target_arch = "wasm32"))]
-    ui.add(widgets::checkbox(&mut app.reopen_last_session, tl!("Reopen the files that were open when AleCraft last closed")));
+    ui.add(widgets::checkbox(&mut app.reopen_last_session, tl!("Reopen the files that were open when AlePdf last closed")));
     // Acrobat's "Restore last view settings when reopening documents" (#1767).
     #[cfg(not(target_arch = "wasm32"))]
     ui.add(widgets::checkbox(&mut app.restore_last_view, tl!("Restore the last view (page, zoom and page display) when a document is opened again")));

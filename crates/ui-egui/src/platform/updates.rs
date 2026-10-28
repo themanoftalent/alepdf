@@ -128,7 +128,7 @@ pub(crate) fn dialog(app: &mut PdfCraftApp, ctx: &egui::Context) {
                 });
             }
             Status::UpToDate => {
-                ui.label(crate::i18n::fmt(tl!("AleCraft {c} is up to date."), &[("c", current)]));
+                ui.label(crate::i18n::fmt(tl!("AlePdf {c} is up to date."), &[("c", current)]));
             }
             Status::Failed(e) => {
                 ui.label(crate::i18n::fmt(tl!("Couldn't check for updates: {e}"), &[("e", e)]));
