@@ -110,6 +110,9 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         }
 
         widgets::section_title(ui, tl!("Other options"));
+        if edit_row(ui, t, "download", tl!("Export all images…"), Availability::Ready).clicked() {
+            run = Some("export.all_images");
+        }
         for other in EDIT_OTHER_TOOLS.iter().filter_map(|id| catalog::group(id)) {
             if edit_row(ui, t, other.icon, tl!(other.label), other.availability).clicked() {
                 tool = Some(other.id);
@@ -289,6 +292,52 @@ fn format_section(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
         if changed {
             app.apply_line_format(i, ed, Some(ui.ctx()));
         }
+        return;
+    }
+    if let Some((i, id)) = app.active_ids()
+        && let Some(sel) = app.views[i].image_selection.clone()
+        && let Some(doc) = app.session.get(id)
+        && let Some(img) = doc.page_images(sel.page).get(sel.index).cloned()
+    {
+        widgets::section_title(ui, tl!("Image"));
+        ui.horizontal(|ui| {
+            if icons::button(ui, "download", 28.0, false, tl!("Save Image As…")).clicked() {
+                app.save_page_image(sel.page, sel.index);
+            }
+            if icons::button(ui, "copy", 28.0, false, tl!("Copy Image")).clicked() {
+                app.copy_page_image(sel.page, sel.index);
+            }
+            if icons::button(ui, "rotate-cw", 28.0, false, tl!("Rotate Clockwise")).clicked() {
+                app.apply_edit(pdfcraft_engine::Edit::EditPageImage {
+                    page: sel.page,
+                    index: sel.index,
+                    change: pdfcraft_engine::ImageEdit::Rotate(1),
+                });
+            }
+            if icons::button(ui, "crop", 28.0, false, tl!("Crop Image")).clicked() {
+                if let Some(s) = app.views[i].image_selection.as_mut() {
+                    s.crop = Some(crate::edit_text_ui::CropMode::new(img.visible_rect.unwrap_or(img.rect)));
+                }
+            }
+            if icons::button(ui, "image", 28.0, false, tl!("Replace Image…")).clicked() {
+                app.replace_page_image_dialog(sel.page, sel.index);
+            }
+            if icons::button(ui, "trash-2", 28.0, false, tl!("Delete Image")).clicked() {
+                app.views[i].image_selection = None;
+                app.apply_edit(pdfcraft_engine::Edit::EditPageImage {
+                    page: sel.page,
+                    index: sel.index,
+                    change: pdfcraft_engine::ImageEdit::Delete,
+                });
+            }
+        });
+        ui.add_space(4.0);
+        let resp = edit_row(ui, t, "download", tl!("Save Image As…"), Availability::Ready);
+        if resp.clicked() {
+            app.save_page_image(sel.page, sel.index);
+        }
+        ui.add_space(6.0);
+        ui.separator();
         return;
     }
     let image = app.active_ids().and_then(|(i, id)| {

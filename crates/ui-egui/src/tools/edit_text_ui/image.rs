@@ -481,6 +481,74 @@ pub(crate) fn image_input(
                 painter.rect_filled(visible, CornerRadius::ZERO, ACCENT.gamma_multiply(0.04));
                 painter.rect_stroke(visible, CornerRadius::ZERO, Stroke::new(1.5, ACCENT), egui::StrokeKind::Outside);
                 handles(preview);
+
+                if allow_interaction && view.image_selection.as_ref().is_some_and(|s| s.crop.is_none()) {
+                    let tokens = Tokens::get(ui.ctx());
+                    let tb_w = 280.0;
+                    let tb_x = visible.left().clamp(view.viewport_rect().left() + 6.0, (view.viewport_rect().right() - tb_w - 6.0).max(view.viewport_rect().left() + 6.0));
+                    let tb_y = if visible.top() - 40.0 >= view.viewport_rect().top() + 4.0 {
+                        visible.top() - 40.0
+                    } else {
+                        visible.bottom() + 8.0
+                    };
+                    let tb_pos = Pos2::new(tb_x, tb_y);
+
+                    egui::Area::new(egui::Id::unique("floating-image-toolbar"))
+                        .order(egui::Order::Foreground)
+                        .fade_in(false)
+                        .fixed_pos(tb_pos)
+                        .show(ui.ctx(), |ui| {
+                            let frame = egui::Frame::NONE
+                                .fill(tokens.card)
+                                .stroke(Stroke::new(1.0, tokens.border))
+                                .corner_radius(CornerRadius::same(8))
+                                .shadow(egui::Shadow {
+                                    offset: [0, 4],
+                                    blur: 16,
+                                    spread: 0,
+                                    color: Color32::from_black_alpha(if tokens.dark() { 90 } else { 30 }),
+                                })
+                                .inner_margin(egui::Margin::symmetric(6, 4));
+
+                            frame.show(ui, |ui| {
+                                ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
+                                ui.horizontal(|ui| {
+                                    if icons::button(ui, "download", 24.0, false, tl!("Save Image As…")).clicked() {
+                                        *action = Some(ImageAction::Save(page, i));
+                                    }
+                                    if icons::button(ui, "copy", 24.0, false, tl!("Copy Image")).clicked() {
+                                        *action = Some(ImageAction::Copy(page, i));
+                                    }
+                                    let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
+                                    ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                                    if icons::button(ui, "rotate-ccw", 24.0, false, tl!("Rotate Counterclockwise")).clicked() {
+                                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Rotate(3) });
+                                    }
+                                    if icons::button(ui, "rotate-cw", 24.0, false, tl!("Rotate Clockwise")).clicked() {
+                                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Rotate(1) });
+                                    }
+                                    if icons::button(ui, "crop", 24.0, false, tl!("Crop Image")).clicked() {
+                                        if let Some(s) = view.image_selection.as_mut() {
+                                            if let Some(im) = images.get(i) {
+                                                s.crop = Some(CropMode::new(im.visible_rect.unwrap_or(im.rect)));
+                                            }
+                                        }
+                                    }
+                                    if icons::button(ui, "image", 24.0, false, tl!("Replace Image…")).clicked() {
+                                        *action = Some(ImageAction::Replace(page, i));
+                                    }
+                                    let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
+                                    ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
+
+                                    if icons::button(ui, "trash-2", 24.0, false, tl!("Delete Image")).clicked() {
+                                        view.image_selection = None;
+                                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Delete });
+                                    }
+                                });
+                            });
+                        });
+                }
             }
             if resp.drag_stopped() || !ptr.primary_down {
                 if let Some(s) = view.image_selection.as_mut() {
