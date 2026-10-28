@@ -153,7 +153,7 @@ impl McpServer {
                 Ok(json!({
                     "protocolVersion": version,
                     "capabilities": { "tools": { "listChanged": false }, "resources": { "listChanged": false, "subscribe": false } },
-                    "serverInfo": { "name": "pdfcraft", "title": "PdfCraft", "version": env!("CARGO_PKG_VERSION"), "websiteUrl": pdfcraft_engine::links::APP_PAGE },
+                    "serverInfo": { "name": "alepdf", "title": "AlePdf", "version": env!("CARGO_PKG_VERSION"), "websiteUrl": pdfcraft_engine::links::APP_PAGE },
                     "instructions": if self.compact { format!("{INSTRUCTIONS}{COMPACT_INSTRUCTIONS}") } else { INSTRUCTIONS.to_string() },
                 }))
             }
@@ -653,7 +653,7 @@ mod tests {
         assert_eq!(replies[0]["error"]["code"], -32700);
         assert_eq!(replies[1]["error"]["code"], -32600);
         assert_eq!(replies[2]["id"], 1);
-        assert_eq!(replies[2]["result"]["serverInfo"]["name"], "pdfcraft");
+        assert_eq!(replies[2]["result"]["serverInfo"]["name"], "alepdf");
     }
 
     #[test]

@@ -159,10 +159,10 @@ fn socket_path() -> Option<std::path::PathBuf> {
     // own name so it never hands files to an installed copy (which keeps its settings elsewhere).
     // Never the portable folder itself: it may sit where other accounts can write (`C:\Tools`).
     let name = if pdfcraft_ui_egui::portable::data_dir().is_some() { format!("portable-{name}") } else { name };
-    std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()).map(|d| std::path::PathBuf::from(d).join("PdfCraft").join(name))
+    std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()).map(|d| std::path::PathBuf::from(d).join("AlePdf").join(name))
 }
 
-/// The socket in `$XDG_RUNTIME_DIR/pdfcraft`; none when `$XDG_RUNTIME_DIR` is unset. Never `/tmp`
+/// The socket in `$XDG_RUNTIME_DIR/alepdf`; none when `$XDG_RUNTIME_DIR` is unset. Never `/tmp`
 /// instead: other accounts can create files there, and so could listen in this user's place.
 #[cfg(all(unix, not(target_os = "macos")))]
 fn socket_path() -> Option<std::path::PathBuf> {
@@ -170,7 +170,7 @@ fn socket_path() -> Option<std::path::PathBuf> {
     let name = display_socket_name(var("WAYLAND_DISPLAY").or_else(|| var("DISPLAY")).as_deref());
     // The XDG base directory spec makes it the user's own (mode 0700), so the folder inside it is
     // out of other accounts' reach whatever the umask.
-    var("XDG_RUNTIME_DIR").map(|d| std::path::PathBuf::from(d).join("pdfcraft").join(name))
+    var("XDG_RUNTIME_DIR").map(|d| std::path::PathBuf::from(d).join("alepdf").join(name))
 }
 
 /// The socket's file name for a display (`WAYLAND_DISPLAY`, else `DISPLAY`): a launch opens its

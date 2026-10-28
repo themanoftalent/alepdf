@@ -416,7 +416,7 @@ fn app_creator<'a>(
         app.enable_desktop_theme();
         // The system's reopen-windows choice (macOS) starts the preference; a saved choice replaces it.
         app.reopen_last_session = reopen::system_default();
-        if let Some(json) = cc.storage.and_then(|s| s.get_string("pdfcraft").or_else(|| s.get_string(LEGACY_STORAGE_KEY))) {
+        if let Some(json) = cc.storage.and_then(|s| s.get_string("alepdf").or_else(|| s.get_string("pdfcraft")).or_else(|| s.get_string(LEGACY_STORAGE_KEY))) {
             app.restore(&json);
         }
         app.window_state = pdfcraft_ui_egui::window_state::WindowState::started_with(cc.storage);

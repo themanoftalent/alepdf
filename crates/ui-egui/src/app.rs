@@ -334,7 +334,7 @@ impl eframe::App for PdfCraftApp {
             let minimized = self.ctx.as_ref().is_some_and(|c| c.input(|i| i.viewport().minimized == Some(true)));
             self.window_state.keep(storage, minimized);
         }
-        storage.set_string("pdfcraft", self.persist());
+        storage.set_string("alepdf", self.persist());
     }
 
     /// Each frame's work before drawing: opens, operating-system and control-channel requests,
