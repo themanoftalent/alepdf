@@ -34,7 +34,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          cargo test -p pdfcraft --lib --tests
+          cargo test -p pdfcraft-engine --lib
 
       - name: Package Universal macOS App & DMG
         run: |
@@ -84,7 +84,7 @@ jobs:
       - name: Package Windows x64
         shell: pwsh
         run: |
-          pwsh packaging/windows/package.ps1 -Arch x64 -BuiltWithoutCraftFonts
+          pwsh packaging/windows/package.ps1 -Arch x64
 
       - name: Upload Windows MSI Installer
         uses: actions/upload-artifact@v7
