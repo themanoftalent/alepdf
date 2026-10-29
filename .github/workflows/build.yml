@@ -3,12 +3,18 @@ name: Build & Package
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish to GitHub Releases"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-macos:
@@ -42,9 +48,79 @@ jobs:
           path: dist/release/AlePdf.dmg
           if-no-files-found: error
 
+      - name: Upload AlePdf CLI (macOS)
+        uses: actions/upload-artifact@v7
+        with:
+          name: AlePdf-CLI-macOS
+          path: dist/release/alepdf-cli-*-macos-*.zip
+          if-no-files-found: error
+
       - name: Upload AlePdf App Bundle
         uses: actions/upload-artifact@v7
         with:
           name: AlePdf-App-Bundle
           path: target/macos-package/AlePdf.app
           if-no-files-found: error
+
+  build-windows:
+    name: Build Windows x64 MSI & Portable ZIP
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install WiX Toolset v5
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+
+      - name: Package Windows x64
+        shell: pwsh
+        run: |
+          pwsh packaging/windows/package.ps1 -Arch x64 -BuiltWithoutCraftFonts
+
+      - name: Upload Windows MSI Installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: AlePdf-Windows-x64-MSI
+          path: dist/release/*windows-x64.msi
+          if-no-files-found: error
+
+      - name: Upload Windows Portable ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: AlePdf-Windows-x64-Portable
+          path: dist/release/*windows-x64-portable.zip
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish Release Assets
+    needs: [build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_release == true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: release-artifacts
+
+      - name: Create / Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME:-v0.15.0}"
+          if [[ "$TAG_NAME" == "main" ]]; then TAG_NAME="v0.15.0"; fi
+          FILES=$(find release-artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.zip" \))
+          echo "Uploading files:"
+          echo "$FILES"
+          gh release upload "$TAG_NAME" $FILES --clobber || gh release create "$TAG_NAME" $FILES --title "AlePdf $TAG_NAME" --generate-notes
