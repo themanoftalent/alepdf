@@ -31,12 +31,12 @@
          names the user's desktop then. Search both desktops and keep the one for the chosen scope. -->
     <Property Id="EXISTINGDESKTOPSHORTCUT_USER">
       <DirectorySearch Id="DesktopSearchUser" Path="[DesktopFolder]" Depth="0">
-        <FileSearch Name="PdfCraft.lnk" />
+        <FileSearch Name="AlePdf.lnk" />
       </DirectorySearch>
     </Property>
     <Property Id="EXISTINGDESKTOPSHORTCUT_MACHINE">
       <DirectorySearch Id="DesktopSearchMachine" Path="[%PUBLIC]\Desktop" Depth="0">
-        <FileSearch Name="PdfCraft.lnk" />
+        <FileSearch Name="AlePdf.lnk" />
       </DirectorySearch>
     </Property>
     <SetProperty Id="EXISTINGDESKTOPSHORTCUT" Action="CraftExistingMachineShortcut" Value="[EXISTINGDESKTOPSHORTCUT_MACHINE]" After="CraftLoadOption2U" Sequence="first" Condition="ALLUSERS = 1 AND EXISTINGDESKTOPSHORTCUT_MACHINE" />
@@ -66,8 +66,8 @@
     <UIRef Id="PdfcraftInstallerUI" />
 
     <StandardDirectory Id="ProgramFiles6432Folder">
-      <Directory Id="CraftSuiteFolder" Name="ArtCraft">
-        <Directory Id="INSTALLFOLDER" Name="PdfCraft">
+      <Directory Id="CraftSuiteFolder" Name="AlePdf">
+        <Directory Id="INSTALLFOLDER" Name="AlePdf">
         <Directory Id="ModelsFolder" Name="models" />
       </Directory>
       </Directory>
@@ -100,48 +100,33 @@
 
         <RegistryValue Root="HKMU" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\pdfcraft.exe" Value="[#PdfcraftExe]" Type="string" />
 
-        <!-- PDF files (#107): PdfCraft is offered under "Open with" and in Settings ▸ Default
-             apps, through Windows' Default Programs registration (a ProgID, OpenWithProgids,
-             Capabilities and RegisteredApplications). It never takes over an existing default:
-             .pdf's own default value is left alone, and the user chooses. Without this, the only
-             PdfCraft entry to pick was the advertised Start Menu shortcut, which Windows can't
-             run as a file handler ("This app can't run on your PC"). -->
-        <RegistryValue Root="HKMU" Key="Software\Classes\PdfCraft.Document" Value="PDF Document" Type="string" />
-        <!-- A negative index selects the stable icon resource ID, rather than its position.
-             Resource 1 is the app's lion; resource 2 is the PDF document (build.rs). -->
-        <RegistryValue Root="HKMU" Key="Software\Classes\PdfCraft.Document\DefaultIcon" Value="&quot;[#PdfcraftExe]&quot;,-2" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\Classes\PdfCraft.Document\shell\open\command" Value="&quot;[#PdfcraftExe]&quot; &quot;%1&quot;" Type="string" />
-        <!-- No overlay on thumbnails and in the preview pane: without TypeOverlay, Windows paints
-             the default program's icon (the lion) over the lower-right corner of every PDF
-             thumbnail, covering part of the page. An empty string means none ("Thumbnail
-             Handlers", Microsoft Learn). -->
-        <RegistryValue Root="HKMU" Key="Software\Classes\PdfCraft.Document" Name="TypeOverlay" Value="" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\Classes\.pdf\OpenWithProgids" Name="PdfCraft.Document" Value="" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\pdfcraft.exe" Name="FriendlyAppName" Value="PdfCraft" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\pdfcraft.exe\DefaultIcon" Value="&quot;[#PdfcraftExe]&quot;,-2" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\pdfcraft.exe\SupportedTypes" Name=".pdf" Value="" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\pdfcraft.exe\shell\open\command" Value="&quot;[#PdfcraftExe]&quot; &quot;%1&quot;" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\PdfCraft\Capabilities" Name="ApplicationName" Value="PdfCraft" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\PdfCraft\Capabilities" Name="ApplicationDescription" Value="Open-source PDF workbench" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\PdfCraft\Capabilities" Name="ApplicationIcon" Value="[#PdfcraftExe],0" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\PdfCraft\Capabilities\FileAssociations" Name=".pdf" Value="PdfCraft.Document" Type="string" />
-        <RegistryValue Root="HKMU" Key="Software\RegisteredApplications" Name="PdfCraft" Value="Software\PdfCraft\Capabilities" Type="string" />
-      <RegistryValue Root="HKMU" Key="Software\PdfCraft" Name="InstallDir" Value="[INSTALLFOLDER]" Type="string" />
+        <!-- PDF files: AlePdf is offered under "Open with" and in Settings ▸ Default apps -->
+        <RegistryValue Root="HKMU" Key="Software\Classes\AlePdf.Document" Value="PDF Document" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\AlePdf.Document\DefaultIcon" Value="&quot;[#PdfcraftExe]&quot;,-2" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\AlePdf.Document\shell\open\command" Value="&quot;[#PdfcraftExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\AlePdf.Document" Name="TypeOverlay" Value="" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\.pdf\OpenWithProgids" Name="AlePdf.Document" Value="" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\alepdf.exe" Name="FriendlyAppName" Value="AlePdf" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\alepdf.exe\DefaultIcon" Value="&quot;[#PdfcraftExe]&quot;,-2" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\alepdf.exe\SupportedTypes" Name=".pdf" Value="" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\Classes\Applications\alepdf.exe\shell\open\command" Value="&quot;[#PdfcraftExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\AlePdf\Capabilities" Name="ApplicationName" Value="AlePdf" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\AlePdf\Capabilities" Name="ApplicationDescription" Value="AlePdf PDF Editor" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\AlePdf\Capabilities" Name="ApplicationIcon" Value="[#PdfcraftExe],0" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\AlePdf\Capabilities\FileAssociations" Name=".pdf" Value="AlePdf.Document" Type="string" />
+        <RegistryValue Root="HKMU" Key="Software\RegisteredApplications" Name="AlePdf" Value="Software\AlePdf\Capabilities" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\AlePdf" Name="InstallDir" Value="[INSTALLFOLDER]" Type="string" />
       </Component>
 
-      <!-- Shortcuts (#143) are plain links to pdfcraft.exe, not advertised MSI shortcuts: advertised
-           ones point at a Windows Installer descriptor rather than the program, which Windows can't
-           use as a file handler (#107), and 0.2.1's advertised one went missing from the Start menu
-           (#143). Each has its own component with an HKLM key path, so Windows Installer removes it
-           on uninstall; in this per-machine package both folders are the all-users ones. -->
+      <!-- Shortcuts: plain links to executable -->
       <Component Id="PdfcraftStartMenuShortcut" Directory="ProgramMenuFolder" Guid="DC028192-C233-4F99-9A77-ED458C60DF26">
         <Shortcut Id="StartMenuShortcut" Name="AlePdf" Description="AlePdf PDF Editor" Target="[#PdfcraftExe]" WorkingDirectory="INSTALLFOLDER" Icon="PdfcraftIcon.ico" IconIndex="0" />
-        <RegistryValue Root="HKMU" Key="Software\PdfCraft\Shortcuts" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+        <RegistryValue Root="HKMU" Key="Software\AlePdf\Shortcuts" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
       </Component>
 
       <Component Id="PdfcraftDesktopShortcut" Directory="DesktopFolder" Guid="F6948627-32AB-4D78-8865-0FDF417CE442" Condition="INSTALLDESKTOPSHORTCUT = 1">
         <Shortcut Id="DesktopShortcut" Name="AlePdf" Description="AlePdf PDF Editor" Target="[#PdfcraftExe]" WorkingDirectory="INSTALLFOLDER" Icon="PdfcraftIcon.ico" IconIndex="0" />
-        <RegistryValue Root="HKMU" Key="Software\PdfCraft\Shortcuts" Name="Desktop" Type="integer" Value="1" KeyPath="yes" />
+        <RegistryValue Root="HKMU" Key="Software\AlePdf\Shortcuts" Name="Desktop" Type="integer" Value="1" KeyPath="yes" />
       </Component>
 
       <!-- PDF context menu: "Edit with AlePdf" opens the file in AlePdf -->
