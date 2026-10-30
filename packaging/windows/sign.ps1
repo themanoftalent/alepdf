@@ -55,8 +55,8 @@ if (-not $haveCert -and -not $haveAzure) {
 }
 
 $script:SignTool = Find-SignTool
-$common = @('sign', '/v', '/fd', 'SHA256', '/td', 'SHA256', '/d', 'PdfCraft', '/du', 'https://github.com/storytold/pdfcraft')
-$tmp = Join-Path ([IO.Path]::GetTempPath()) "pdfcraft-sign-$([IO.Path]::GetRandomFileName())"
+$common = @('sign', '/v', '/fd', 'SHA256', '/td', 'SHA256', '/d', 'AlePdf', '/du', 'https://github.com/themanoftalent/alepdf')
+$tmp = Join-Path ([IO.Path]::GetTempPath()) "alepdf-sign-$([IO.Path]::GetRandomFileName())"
 New-Item -ItemType Directory -Path $tmp | Out-Null
 
 try {
