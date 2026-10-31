@@ -1,0 +1,48 @@
+name: Publish approved AlePdf Mac preview
+on:
+  push:
+    branches: [release/macos-preview]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-verified-dmg:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_RUN: '41195608408'
+      BUILD_COMMIT: '182be46f91953d91199f0acacac3d15e6464f33b'
+    steps:
+      - name: Wait for the exact verified build
+        run: |
+          for attempt in $(seq 1 80); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" > run.json
+            test "$(python3 -c 'import json;print(json.load(open("run.json"))["head_sha"])')" = "$BUILD_COMMIT"
+            state=$(python3 -c 'import json;print(json.load(open("run.json"))["status"])')
+            if [ "$state" = completed ]; then
+              test "$(python3 -c 'import json;print(json.load(open("run.json"))["conclusion"])')" = success
+              break
+            fi
+            if [ "$attempt" = 80 ]; then exit 1; fi
+            sleep 30
+          done
+      - name: Download and verify the built DMG
+        run: |
+          gh run download "$BUILD_RUN" --repo "$GITHUB_REPOSITORY" --name AlePdf-Mac-review-only --dir package
+          cd package
+          shasum -a 256 -c SHA256SUMS-macos.txt
+          hdiutil verify AlePdf-0.15.0-macos-arm64-preview.dmg
+          mkdir mounted
+          hdiutil attach -readonly -nobrowse -mountpoint "$PWD/mounted" AlePdf-0.15.0-macos-arm64-preview.dmg
+          codesign --verify --deep --strict mounted/AlePdf.app
+          test -f mounted/AlePdf.app/Contents/Resources/LICENSE-MIT
+          test -f mounted/AlePdf.app/Contents/Resources/LICENSE-APACHE
+          test -d mounted/AlePdf.app/Contents/Resources/Licenses
+          hdiutil detach mounted
+      - name: Publish owner-approved public prerelease
+        run: |
+          cat > notes.txt <<'NOTES'
+          AlePdf 0.15.0 Apple Silicon preview for macOS. Ad-hoc signed and NOT notarized; macOS may block it. Do not disable security protections. Verified original artwork, asset audit, bundled licenses/font/model notices, app signature and mounted DMG checks passed. A separate local build of these application changes was opened and rendered a synthetic PDF; interactive coverage of this CI artifact and other devices remains limited. This is a preview, not a stable release.
+          NOTES
+          gh release create "alepdf-mac-preview-${{ github.run_number }}" --repo "$GITHUB_REPOSITORY" --target "$BUILD_COMMIT" --prerelease --title "AlePdf Apple Silicon preview ${{ github.run_number }}" --notes-file notes.txt package/AlePdf-0.15.0-macos-arm64-preview.dmg package/SHA256SUMS-macos.txt
