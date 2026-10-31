@@ -4,7 +4,7 @@ on:
     branches: [feat/windows-preview, fix/edit-open-flow]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: alepdf-windows-preview-${{ github.ref }}
   cancel-in-progress: false
@@ -89,3 +89,17 @@ jobs:
             dist/release/AlePdf-*-windows-x64-setup.exe
             dist/release/AlePdf-*-windows-x64-portable.zip
           if-no-files-found: error
+      - name: Publish explicitly labeled Windows prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $Files = @(Get-ChildItem dist/release/AlePdf-*-windows-x64-setup.exe) + @(Get-ChildItem dist/release/AlePdf-*-windows-x64-portable.zip)
+          $Checksums = $Files | ForEach-Object { $H = Get-FileHash $_.FullName -Algorithm SHA256; "$($H.Hash.ToLower())  $($_.Name)" }
+          $Checksums | Set-Content dist/release/SHA256SUMS-windows.txt
+          $Notes = @'
+          AlePdf Windows x64 unsigned preview. Edit PDF picker and image replacement workflow regression tests, original cat branding, source asset audit, Windows collision tests, portable extraction/CLI, EXE installation/uninstallation and GUI window startup passed. Interactive document editing/signing and other Windows devices have not been tested. No certificate identity verification is claimed; do not disable OS security protections. Original licenses and font/model notices are bundled. This is a prerelease, not a stable release.
+          '@
+          $Notes | Set-Content dist/release/WINDOWS-RELEASE-NOTES.txt
+          $Tag = "alepdf-windows-preview-${{ github.run_number }}"
+          gh release create $Tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title "AlePdf Windows x64 preview ${{ github.run_number }}" --notes-file dist/release/WINDOWS-RELEASE-NOTES.txt @($Files.FullName) dist/release/SHA256SUMS-windows.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
