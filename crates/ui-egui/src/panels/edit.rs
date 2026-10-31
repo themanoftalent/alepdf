@@ -166,11 +166,11 @@ pub(super) fn actions_menu(
 /// item is muted and says when it ships when hovered.
 fn edit_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, availability: Availability) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), label));
     let press = theme::Press::track(ui, &resp);
     press.wash(ui, rect, 6, false);
     let body = rect.translate(press.offset());
-    let ready = availability == Availability::Ready;
+    let ready = availability == Availability::Ready && ui.is_enabled();
     let fg = if ready { t.text } else { t.text_muted };
     icons::paint(ui, Rect::from_min_size(body.min + vec2(6.0, 8.0), vec2(18.0, 18.0)), icon, 17.0, if ready { t.text } else { t.text_faint });
     row_label(ui, label, theme::regular(13.5), fg, body.left_center() + vec2(34.0, 0.0), rect.width() - 42.0);
@@ -322,19 +322,23 @@ fn format_section(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
                     s.crop = Some(crate::edit_text_ui::CropMode::new(img.visible_rect.unwrap_or(img.rect)));
                 }
             }
-            if icons::button(ui, "image", 28.0, false, tl!("Replace Image…")).clicked() {
-                app.replace_page_image_dialog(sel.page, sel.index);
-            }
             if icons::button(ui, "trash-2", 28.0, false, tl!("Delete Image")).clicked() {
                 app.views[i].image_selection = None;
-                app.apply_edit(pdfcraft_engine::Edit::EditPageImage {
-                    page: sel.page,
-                    index: sel.index,
-                    change: pdfcraft_engine::ImageEdit::Delete,
-                });
+                app.apply_edit(pdfcraft_engine::Edit::EditPageImage { page: sel.page, index: sel.index, change: pdfcraft_engine::ImageEdit::Delete });
             }
         });
         ui.add_space(4.0);
+        let replace = ui.add_enabled_ui(!img.is_form, |ui| edit_row(ui, t, "image", tl!("Replace Image…"), Availability::Ready)).inner;
+        if replace
+            .on_hover_text(tl!("The new image fills the existing bounds. Flattened parts are not separate images."))
+            .on_disabled_hover_text(tl!("Grouped/vector artwork cannot be replaced with a bitmap."))
+            .clicked()
+        {
+            app.replace_page_image_dialog(sel.page, sel.index);
+        }
+        if img.is_form {
+            ui.label(egui::RichText::new(tl!("Grouped/vector artwork cannot be replaced with a bitmap.")).small().color(t.text_muted));
+        }
         let resp = edit_row(ui, t, "download", tl!("Save Image As…"), Availability::Ready);
         if resp.clicked() {
             app.save_page_image(sel.page, sel.index);

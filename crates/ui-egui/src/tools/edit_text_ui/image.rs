@@ -509,19 +509,15 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                 let visible = b.intersect(xf.rect);
                 if visible.is_positive() {
                     let tb_w = 280.0;
-                    let tb_x = visible.left().clamp(view.viewport_rect().left() + 6.0, (view.viewport_rect().right() - tb_w - 6.0).max(view.viewport_rect().left() + 6.0));
-                    let tb_y = if visible.top() - 40.0 >= view.viewport_rect().top() + 4.0 {
-                        visible.top() - 40.0
-                    } else {
-                        visible.bottom() + 8.0
-                    };
+                    let tb_x = visible
+                        .left()
+                        .clamp(view.viewport_rect().left() + 6.0, (view.viewport_rect().right() - tb_w - 6.0).max(view.viewport_rect().left() + 6.0));
+                    let tb_y = if visible.top() - 40.0 >= view.viewport_rect().top() + 4.0 { visible.top() - 40.0 } else { visible.bottom() + 8.0 };
                     let tb_pos = Pos2::new(tb_x, tb_y);
 
-                    egui::Area::new(egui::Id::unique("floating-image-toolbar"))
-                        .order(egui::Order::Foreground)
-                        .fade_in(false)
-                        .fixed_pos(tb_pos)
-                        .show(ui.ctx(), |ui| {
+                    egui::Area::new(egui::Id::unique("floating-image-toolbar")).order(egui::Order::Foreground).fade_in(false).fixed_pos(tb_pos).show(
+                        ui.ctx(),
+                        |ui| {
                             let frame = egui::Frame::NONE
                                 .fill(tokens.card)
                                 .stroke(Stroke::new(1.0, tokens.border))
@@ -547,10 +543,12 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                                     ui.painter().vline(sep.center().x, sep.y_range().shrink(2.0), Stroke::new(1.0, tokens.divider));
 
                                     if icons::button(ui, "rotate-ccw", 24.0, false, tl!("Rotate Counterclockwise")).clicked() {
-                                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Rotate(3) });
+                                        view.pending_edit =
+                                            Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Rotate(3) });
                                     }
                                     if icons::button(ui, "rotate-cw", 24.0, false, tl!("Rotate Clockwise")).clicked() {
-                                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Rotate(1) });
+                                        view.pending_edit =
+                                            Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Rotate(1) });
                                     }
                                     if icons::button(ui, "crop", 24.0, false, tl!("Crop Image")).clicked() {
                                         if let Some(s) = view.image_selection.as_mut() {
@@ -559,7 +557,13 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                                             }
                                         }
                                     }
-                                    if icons::button(ui, "image", 24.0, false, tl!("Replace Image…")).clicked() {
+                                    let raster = images.get(i).is_some_and(|image| !image.is_form);
+                                    if ui
+                                        .add_enabled_ui(raster, |ui| icons::button(ui, "image", 24.0, false, tl!("Replace Image…")))
+                                        .inner
+                                        .on_disabled_hover_text(tl!("Grouped/vector artwork cannot be replaced with a bitmap."))
+                                        .clicked()
+                                    {
                                         *action = Some(ImageAction::Replace(page, i));
                                     }
                                     let (sep, _) = ui.allocate_exact_size(egui::vec2(5.0, 20.0), egui::Sense::hover());
@@ -571,7 +575,8 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                                     }
                                 });
                             });
-                        });
+                        },
+                    );
                 }
             }
         }
@@ -709,7 +714,11 @@ fn image_menu(
         ui.close();
     }
     let raster = images.get(hit).is_some_and(|image| !image.is_form);
-    if ui.add_enabled(raster, egui::Button::new(tl!("Replace Image…"))).clicked() {
+    if ui
+        .add_enabled(raster, egui::Button::new(tl!("Replace Image…")))
+        .on_disabled_hover_text(tl!("Grouped/vector artwork cannot be replaced with a bitmap."))
+        .clicked()
+    {
         *action = Some(ImageAction::Replace(page, hit));
         ui.close();
     }
