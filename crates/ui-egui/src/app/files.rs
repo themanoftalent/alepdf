@@ -167,7 +167,7 @@ impl PdfCraftApp {
             open_worker::ResultKind::Conversion(bytes) => match self.open_converted(&pending.name, &bytes) {
                 Some(Ok(())) => {
                     if let Some(command) = pending.then {
-                        self.execute(command);
+                        self.resume_open_action(command);
                     }
                 }
                 Some(Err(error)) => self.notify_fmt("Couldn't open {name}: {e}", &[("name", &pending.name), ("e", &error)]),
@@ -186,7 +186,7 @@ impl PdfCraftApp {
                             self.finish_recovery(meta);
                         }
                         if let Some(command) = pending.then {
-                            self.execute(command);
+                            self.resume_open_action(command);
                         }
                     }
                     Err(error) => self.notify_fmt("Couldn't open {name}: {e}", &[("name", &pending.name), ("e", &error)]),
@@ -462,7 +462,7 @@ impl PdfCraftApp {
                     self.finish_recovery(meta);
                 }
                 if let Some(command) = p.then {
-                    self.execute(command);
+                    self.resume_open_action(command);
                 }
             }
             // Wrong password: the new prompt is for the same bytes, so it keeps the snapshot
@@ -491,7 +491,7 @@ impl PdfCraftApp {
             // Carry on with what asked for the password, if its document is still the one shown.
             Ok(()) => match p.then {
                 Some(command) if self.active_ids().is_some_and(|(_, id)| id == p.doc) => {
-                    self.execute(command);
+                    self.resume_open_action(command);
                 }
                 _ => self.notify_tr("Restrictions lifted"),
             },
@@ -539,7 +539,7 @@ impl PdfCraftApp {
             self.startup_superseded = true;
             self.active = Some(i);
             if let Some(command) = then {
-                self.execute(command);
+                self.resume_open_action(command);
             }
             return OpenOutcome::Focused;
         }
@@ -568,7 +568,7 @@ impl PdfCraftApp {
                             self.watch.known_as(doc, stamp);
                         }
                         if let Some(command) = then {
-                            self.execute(command);
+                            self.resume_open_action(command);
                         }
                     } else {
                         // Open reported success but added no tab and raised no prompt; the

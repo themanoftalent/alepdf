@@ -13,7 +13,9 @@ impl PdfCraftApp {
                 .flat_map(|g| g.sections.iter().flat_map(|s| s.items.iter()))
                 .any(|i| i.command == spec.id);
             if self.active.is_none() && needs_document && is_tool && !self.command_enabled(spec) {
-                self.open_then_run(spec);
+                if !self.tool_entry_pending() {
+                    self.open_then_run(spec);
+                }
                 return;
             }
             self.execute(command);
@@ -56,17 +58,73 @@ impl PdfCraftApp {
         self.left_open = true;
     }
 
-    /// Enter a tool from the catalogue, Home, palette or control channel. Organize is a
-    /// workspace, so opening its panel also opens the page grid (without toggling it off).
+    fn tool_entry_pending(&self) -> bool {
+        self.pickers.pending() || !self.pending_opens.is_empty() || self.modal_open()
+    }
+
+    /// Open continuations may name a catalogue group or a registered command. Group entry
+    /// is deferred until opening (including password entry) succeeds; cancellation changes no tool.
+    pub(crate) fn resume_open_action(&mut self, action: &'static str) {
+        if let Some(group) = pdfcraft_engine::catalog::group(action) {
+            self.select_tool(group.id);
+        } else {
+            self.execute(action);
+        }
+    }
+
+    /// Enter a catalogue workspace. Document tools first ask for a PDF; creation and combine
+    /// retain their own input workflows. Re-entering Organize never toggles its grid off.
     pub(crate) fn select_tool(&mut self, id: &'static str) {
-        if id == "edit" {
-            if self.active.is_none() && (self.pickers.pending() || !self.pending_opens.is_empty() || self.modal_open()) {
+        use pdfcraft_engine::commands::Needs;
+        let group = pdfcraft_engine::catalog::group(id);
+        let needs_document = !matches!(id, "create" | "combine")
+            && group.is_some_and(|g| {
+                g.sections.iter().flat_map(|s| s.items).any(|item| {
+                    pdfcraft_engine::commands::command(item.command).is_some_and(|c| !matches!(c.needs, Needs::Nothing | Needs::Undo | Needs::Redo))
+                })
+            });
+        if self.active.is_none() && needs_document {
+            if self.tool_entry_pending() {
                 return;
             }
-            self.run_command("edit.edit_text");
+            if let Some(group) = group {
+                self.startup_superseded = true;
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let dialog = Self::open_picker().set_title(tl!(group.label));
+                    self.ask_one(pickers::Ask::File(dialog), None, move |app, path| {
+                        app.open_path_then(&path.to_string_lossy(), Some(group.id));
+                    });
+                }
+                #[cfg(target_arch = "wasm32")]
+                self.open_dialog();
+            }
             return;
         }
-        // The tool's panel shows, not the expanded All tools view over it.
+        match id {
+            "edit" => {
+                self.run_command("edit.edit_text");
+                return;
+            }
+            "combine" => {
+                self.execute("page.combine");
+                return;
+            }
+            "create" => {
+                self.execute("create.file");
+                return;
+            }
+            "fill_sign" => {
+                self.select_mode(Mode::Sign);
+                self.quick_tool = QuickTool::Select;
+            }
+            "export" => self.select_mode(Mode::Convert),
+            "organize" | "comment" | "form" | "protect" => {
+                self.enter_mode(Mode::AllTools);
+                self.quick_tool = QuickTool::Select;
+            }
+            _ => {}
+        }
         self.all_tools_full = false;
         self.left = LeftPanel::Tool(id);
         self.reveal_tools();
@@ -77,14 +135,29 @@ impl PdfCraftApp {
                 view.organize = false;
             }
         }
+        match id {
+            "comment" => self.choose_right_panel(Some(RightPanel::Comments)),
+            "form" => {
+                self.run_command("form.prepare");
+            }
+            _ => {}
+        }
     }
 
     /// Select the workspace and its matching tool panel, just like the mode bar. The tool goes
     /// with the workspace as [`Self::enter_mode`] sets it.
     pub(crate) fn select_mode(&mut self, mode: Mode) {
-        if mode == Mode::Edit && self.active.is_none() {
-            self.select_tool("edit");
-            return;
+        if self.active.is_none() {
+            let tool = match mode {
+                Mode::Edit => Some("edit"),
+                Mode::Sign => Some("fill_sign"),
+                Mode::Convert => Some("export"),
+                _ => None,
+            };
+            if let Some(tool) = tool {
+                self.select_tool(tool);
+                return;
+            }
         }
         self.enter_mode(mode);
         self.reveal_tools();
@@ -154,6 +227,10 @@ impl PdfCraftApp {
     /// that panel. The rail stays in Read mode, and its buttons open panels there too (#932).
     /// Read mode hides the quick toolbar, so entering it also puts the current tool down.
     pub(crate) fn switch_mode(&mut self, mode: Mode, select_tools: bool) {
+        if select_tools && self.active.is_none() && matches!(mode, Mode::Edit | Mode::Sign | Mode::Convert) {
+            self.select_mode(mode);
+            return;
+        }
         let was_read = self.mode == Mode::Read;
         if select_tools {
             self.select_mode(mode);

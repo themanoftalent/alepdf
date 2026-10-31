@@ -6,7 +6,7 @@ use crate::support;
 use egui::os::OperatingSystem;
 use egui::{Key, Modifiers};
 use egui_kittest::Harness;
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 use pdfcraft_engine::commands::COMMANDS;
 use pdfcraft_ui_egui::{Dialog, PdfCraftApp};
 
@@ -750,6 +750,155 @@ fn edit_entry_cancel_and_open_failure_leave_home_unchanged_and_allow_retry() {
         support::wait_until(&mut h, "retry opens the selected PDF", |a| a.active.is_some());
         assert_eq!(h.state().mode, pdfcraft_ui_egui::Mode::Edit);
         assert_eq!(h.state().views.len(), 1);
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn home_tool_entry_document_cards_open_and_enter_their_workspace() {
+    use pdfcraft_ui_egui::{LeftPanel, Mode, RightPanel};
+    let dir = std::env::temp_dir().join(format!("alepdf-home-tools-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("tools.pdf");
+    std::fs::write(&path, fixture(2)).unwrap();
+    for (id, label) in [
+        ("organize", "Organize pages"),
+        ("comment", "Add comments"),
+        ("fill_sign", "Fill & Sign"),
+        ("form", "Prepare a form"),
+        ("protect", "Protect a PDF"),
+    ] {
+        let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+            let mut app = PdfCraftApp::new();
+            app.set_option("language", "en").unwrap();
+            app.pick_override = Some(vec![path.to_string_lossy().into_owned()]);
+            app
+        });
+        h.run_steps(2);
+        h.get_all_by_label(label).last().unwrap().click();
+        h.run_steps(1);
+        h.state_mut().set_option("tool", id).unwrap();
+        support::wait_until(&mut h, label, |a| a.active.is_some());
+        let check = |app: &PdfCraftApp| {
+            assert_eq!(app.views.len(), 1, "{id} must not open duplicate tabs");
+            assert_eq!(app.left, LeftPanel::Tool(id));
+            match id {
+                "organize" => assert!(app.views[0].organize),
+                "comment" => assert_eq!(app.right, Some(RightPanel::Comments)),
+                "fill_sign" => assert_eq!(app.mode, Mode::Sign),
+                "form" => assert_eq!(app.right, Some(RightPanel::Fields)),
+                _ => {}
+            }
+        };
+        check(h.state());
+        h.state_mut().pick_override = Some(Vec::new());
+        h.state_mut().set_option("tool", id).unwrap();
+        h.run_steps(3);
+        check(h.state());
+        assert!(h.state().pick_override.is_some(), "existing document must not invoke a picker");
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn home_tool_entry_cancel_invalid_and_retry_preserve_workspace() {
+    let dir = std::env::temp_dir().join(format!("alepdf-home-cancel-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let good = dir.join("good.pdf");
+    let bad = dir.join("broken.pdf");
+    std::fs::write(&good, fixture(1)).unwrap();
+    std::fs::write(&bad, b"not a PDF").unwrap();
+    for id in ["organize", "comment", "fill_sign", "form", "protect", "export"] {
+        for picked in [None, Some(&bad), Some(&dir.join("missing.pdf"))] {
+            let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+                let mut app = PdfCraftApp::new();
+                app.set_option("language", "en").unwrap();
+                app.pick_override = Some(picked.map(|p| vec![p.to_string_lossy().into_owned()]).unwrap_or_default());
+                app
+            });
+            h.run_steps(2);
+            let before = (h.state().mode, h.state().left, h.state().quick_tool);
+            h.state_mut().set_option("tool", id).unwrap();
+            h.run_steps(6);
+            if picked.is_some() {
+                support::wait_until(&mut h, "invalid input reports an error", |a| a.toast.is_some());
+            }
+            assert!(h.state().active.is_none(), "{id}");
+            assert_eq!((h.state().mode, h.state().left, h.state().quick_tool), before, "{id}");
+            h.state_mut().pick_override = Some(vec![good.to_string_lossy().into_owned()]);
+            h.state_mut().set_option("tool", id).unwrap();
+            support::wait_until(&mut h, "retry succeeds", |a| a.active.is_some());
+            assert_eq!(h.state().left, pdfcraft_ui_egui::LeftPanel::Tool(id));
+        }
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn home_tool_entry_open_create_and_combine_keep_their_input_flows() {
+    let dir = std::env::temp_dir().join(format!("alepdf-home-inputs-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let pdf = dir.join("open.pdf");
+    let text = dir.join("create.txt");
+    std::fs::write(&pdf, fixture(1)).unwrap();
+    std::fs::write(&text, "Original synthetic AlePdf creation test.").unwrap();
+    for (label, path) in [("Open PDF", &pdf), ("Create PDF", &text)] {
+        let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+            let mut app = PdfCraftApp::new();
+            app.set_option("language", "en").unwrap();
+            app.pick_override = Some(vec![path.to_string_lossy().into_owned()]);
+            app
+        });
+        h.run_steps(2);
+        h.get_all_by_label(label).last().unwrap().click();
+        support::wait_until(&mut h, label, |a| a.active.is_some());
+        assert_eq!(h.state().views.len(), 1);
+        assert_eq!(h.state().session.get(h.state().views[0].id).unwrap().info.pages.len(), 1);
+    }
+    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+        let mut app = PdfCraftApp::new();
+        app.set_option("language", "en").unwrap();
+        app
+    });
+    h.run_steps(2);
+    h.get_all_by_label("Combine Files").last().unwrap().click();
+    h.run_steps(3);
+    assert!(h.state().combine_showing());
+    h.state_mut().set_option("tool", "combine").unwrap();
+    assert!(h.state().combine_showing());
+    assert!(h.state().views.is_empty());
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn home_tool_entry_mode_bar_opens_document_and_existing_edits_survive_switching() {
+    use pdfcraft_ui_egui::{Mode, QuickTool};
+    let dir = std::env::temp_dir().join(format!("alepdf-home-modes-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("modes.pdf");
+    std::fs::write(&path, fixture(2)).unwrap();
+    for (label, mode) in [("Edit", Mode::Edit), ("E-Sign", Mode::Sign), ("Convert", Mode::Convert)] {
+        let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+            let mut app = PdfCraftApp::new();
+            app.set_option("language", "en").unwrap();
+            app.pick_override = Some(vec![path.to_string_lossy().into_owned()]);
+            app
+        });
+        h.run_steps(2);
+        h.get_all_by_label(label).find(|n| n.accesskit_node().role() == egui::accesskit::Role::Button).unwrap().click();
+        support::wait_until(&mut h, label, |a| a.active.is_some());
+        assert_eq!(h.state().mode, mode);
+        h.state_mut().apply_edit(pdfcraft_engine::Edit::RotatePages { pages: vec![0], degrees: 90 });
+        for tool in ["organize", "comment", "fill_sign", "form", "protect", "edit"] {
+            h.state_mut().set_option("tool", tool).unwrap();
+            h.run_steps(2);
+            let doc = h.state().session.get(h.state().views[0].id).unwrap();
+            assert_eq!(doc.info.pages[0].rotation, 90);
+            assert!(doc.dirty);
+            if tool != "edit" {
+                assert_eq!(h.state().quick_tool, QuickTool::Select, "old editing tool must not remain active in {tool}");
+            }
+        }
     }
     let _ = std::fs::remove_dir_all(dir);
 }
