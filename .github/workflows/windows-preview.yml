@@ -1,0 +1,94 @@
+name: AlePdf Windows preview validation
+on:
+  push:
+    branches: [feat/windows-preview]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: alepdf-windows-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '2'
+      PDFCRAFT_SYSTEM_FONTS: '0'
+      PDFCRAFT_BUILD_LABEL: windows-preview.${{ github.run_number }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup default 1.95.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup target add x86_64-pc-windows-msvc
+          exit $LASTEXITCODE
+      - name: Validate Drive collision behavior on Windows
+        run: |
+          cargo test --locked -p pdfcraft-ui-egui --lib google_drive
+          exit $LASTEXITCODE
+      - name: Build unsigned portable preview
+        run: |
+          ./packaging/windows/package.ps1 -Arch x64 -PortableOnly
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate extracted portable payload
+        run: |
+          $Zip = Get-ChildItem dist/release/AlePdf-*-windows-x64-portable.zip
+          if (@($Zip).Count -ne 1) { throw 'Expected exactly one AlePdf preview ZIP.' }
+          ./packaging/windows/test-portable.ps1 -Path $Zip.FullName
+      - name: Compile unsigned EXE installer from validated portable payload
+        run: |
+          $Compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $Compiler)) { throw 'Runner lacks Inno Setup; do not download an unverified replacement.' }
+          $Payload = @(Get-ChildItem target/windows-package -Directory -Filter 'AlePdf-*-windows-x64-portable')
+          if ($Payload.Count -ne 1) { throw 'Expected exactly one validated portable payload.' }
+          $Version = ($Payload[0].Name -replace '^AlePdf-', '') -replace '-windows-x64-portable$', ''
+          $Release = (Resolve-Path dist/release).Path
+          & $Compiler "/DPayloadDir=$($Payload[0].FullName)" "/DReleaseDir=$Release" "/DAppVersion=$Version" packaging/windows/preview-setup.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist/release/AlePdf-*-windows-x64-setup.exe | Get-FileHash -Algorithm SHA256 | Format-List
+          Write-Output 'Installer compiled only. Installation/uninstallation and GUI acceptance still require Windows validation.'
+      - name: Record package hashes and unsigned status
+        run: |
+          Get-ChildItem dist/release/AlePdf-*-windows-x64-portable.zip | Get-FileHash -Algorithm SHA256 | Format-List
+          Get-AuthenticodeSignature target/windows-package/x64/alepdf.exe | Select-Object Status,StatusMessage | Format-List
+          Write-Output 'Compile and CLI smoke only. GUI startup, PDF editing, installation, and runtime acceptance are NOT established.'
+      - name: Distribution asset gate
+        run: |
+          cargo xtask assets
+          exit $LASTEXITCODE
+      - name: Validate Windows installation and GUI startup
+        run: |
+          $Setup = @(Get-ChildItem dist/release/AlePdf-*-windows-x64-setup.exe)
+          if ($Setup.Count -ne 1) { throw 'Expected exactly one installer.' }
+          ./packaging/windows/test-preview-install.ps1 -Installer $Setup[0].FullName
+      - name: Upload validated preview artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: AlePdf-Windows-validated-preview
+          path: |
+            dist/release/AlePdf-*-windows-x64-setup.exe
+            dist/release/AlePdf-*-windows-x64-portable.zip
+          if-no-files-found: error
+      - name: Publish explicitly labeled Windows prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $Files = @(Get-ChildItem dist/release/AlePdf-*-windows-x64-setup.exe) + @(Get-ChildItem dist/release/AlePdf-*-windows-x64-portable.zip)
+          $Checksums = $Files | ForEach-Object { $H = Get-FileHash $_.FullName -Algorithm SHA256; "$($H.Hash.ToLower())  $($_.Name)" }
+          $Checksums | Set-Content dist/release/SHA256SUMS-windows.txt
+          $Notes = @'
+          AlePdf Windows x64 unsigned preview. Source asset audit, Windows collision tests, portable extraction/CLI, EXE installation/uninstallation and GUI window startup passed. Interactive document editing/signing and other Windows devices have not been tested. No certificate identity verification is claimed; do not disable OS security protections. Original licenses and font/model notices are bundled. This is a prerelease, not a stable release.
+          '@
+          $Notes | Set-Content dist/release/WINDOWS-RELEASE-NOTES.txt
+          $Tag = "alepdf-windows-preview-${{ github.run_number }}"
+          gh release create $Tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title "AlePdf Windows x64 preview ${{ github.run_number }}" --notes-file dist/release/WINDOWS-RELEASE-NOTES.txt @($Files.FullName) dist/release/SHA256SUMS-windows.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

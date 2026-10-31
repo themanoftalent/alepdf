@@ -555,39 +555,10 @@ pub fn progress_notice(app: &PdfCraftApp, ctx: &egui::Context) -> bool {
     cancel
 }
 
-/// The ArtCraft wordmark (Storyteller's brand, docs/brand/; not open source), sized to `height`.
-#[allow(dead_code)]
-pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
-    let dark = ui.visuals().dark_mode;
-    let (uri, bytes): (&str, &'static [u8]) = if dark {
-        ("bytes://artcraft-logo-white.svg", include_bytes!("../../../docs/brand/artcraft-logo-white.svg"))
-    } else {
-        ("bytes://artcraft-logo.svg", include_bytes!("../../../docs/brand/artcraft-logo.svg"))
-    };
-    ui.add(egui::Image::from_bytes(uri, bytes).max_height(height).alt_text("ArtCraft"))
-}
-
-#[allow(dead_code)]
-pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
-    ui.add(
-        egui::Image::from_bytes("bytes://artcraft-mark.svg", include_bytes!("../../../docs/brand/artcraft-mark.svg"))
-            .fit_to_exact_size(vec2(size, size))
-            .alt_text("ArtCraft"),
-    )
-}
-
 /// The AlePdf app logo, `size` points square.
 pub fn alepdf_logo(ui: &mut egui::Ui, size: f32) -> Response {
-    let texture = ui.ctx().load_texture(
-        "alepdf-logo-texture",
-        alepdf_logo_color_image().clone(),
-        egui::TextureOptions::LINEAR,
-    );
-    ui.add(
-        egui::Image::new(&texture)
-            .fit_to_exact_size(vec2(size, size))
-            .corner_radius(CornerRadius::same((size * 0.22) as u8)),
-    )
+    let texture = ui.ctx().load_texture("alepdf-logo-texture", alepdf_logo_color_image().clone(), egui::TextureOptions::LINEAR);
+    ui.add(egui::Image::new(&texture).fit_to_exact_size(vec2(size, size)).corner_radius(CornerRadius::same((size * 0.22) as u8)))
 }
 
 fn alepdf_logo_color_image() -> &'static egui::ColorImage {

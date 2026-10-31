@@ -30,11 +30,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 ui.add_space(8.0);
                 ui.vertical(|ui| {
                     ui.label(egui::RichText::new("AlePdf").font(theme::semibold(26.0)));
-                    ui.label(
-                        egui::RichText::new(tl!("Professional PDF Editor for macOS"))
-                            .color(t.text_muted)
-                            .font(theme::regular(14.0)),
-                    );
+                    ui.label(egui::RichText::new(tl!("Professional PDF Editor for macOS")).color(t.text_muted).font(theme::regular(14.0)));
                 });
             });
             ui.add_space(14.0);
@@ -52,8 +48,10 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                             ui.painter().text(rect.center(), Align2::CENTER_CENTER, "{}", theme::semibold(14.0), egui::Color32::WHITE);
                             ui.add_space(4.0);
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new("Open Source | SoftAI Yazılım").font(theme::semibold(15.0)));
-                                ui.label(egui::RichText::new("Developed by Assoc. Prof. Dr. Mehmet Akif Cifci (@themanoftalent)").color(t.text_muted));
+                                ui.label(egui::RichText::new("AlePdf | Open-source PDF tools").font(theme::semibold(15.0)));
+                                ui.label(
+                                    egui::RichText::new("Developed by Assoc. Prof. Dr. Mehmet Akif Cifci (@themanoftalent)").color(t.text_muted),
+                                );
                             });
                             // Closed for this run only: the card is back on the next launch.
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -65,8 +63,11 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                         ui.add_space(10.0);
                         ui.horizontal_wrapped(|ui| {
                             ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
-                            if ui.button(egui::RichText::new("</>  GitHub").font(theme::medium(12.5))).clicked() {
-                                ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/themanoftalent"));
+                            if widgets::pill_button(ui, "Follow @themanoftalent", true).clicked() {
+                                app.open_url(pdfcraft_engine::links::WEBSITE);
+                            }
+                            if ui.button(egui::RichText::new("Star AlePdf").strong()).clicked() {
+                                app.open_url(pdfcraft_engine::links::GITHUB);
                             }
                             if ui.button(egui::RichText::new("❤️  Sponsor Me").font(theme::medium(12.5))).clicked() {
                                 ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/sponsors/themanoftalent"));
@@ -121,7 +122,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                             ui.painter().text(
                                 body.left_bottom() + vec2(14.0, -14.0),
                                 Align2::LEFT_CENTER,
-                                tl!("Use now"),
+                                tl!("View tools"),
                                 theme::medium(12.0),
                                 t.accent_text,
                             );
@@ -130,11 +131,8 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                                 app.select_tool(g.id);
                             }
                         }
-                        let actions: [(&str, &str, &str); 3] = [
-                            ("folder-open", "Open PDF", "open"),
-                            ("file-plus", "Create PDF", "create"),
-                            ("copy-plus", "Combine Files", "combine"),
-                        ];
+                        let actions: [(&str, &str, &str); 3] =
+                            [("folder-open", "Open PDF", "open"), ("file-plus", "Create PDF", "create"), ("copy-plus", "Combine Files", "combine")];
                         for (icon_name, label, act) in actions {
                             let (rect, resp) = ui.allocate_exact_size(vec2(170.0, 104.0), Sense::click());
                             resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(label)));
@@ -153,9 +151,13 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                             if theme::hand(resp).clicked() {
                                 match act {
                                     "open" => app.open_dialog(),
-                                    "create" => { app.execute("create.file"); },
-                                    "combine" => { app.execute("page.combine"); },
-                                    _ => {},
+                                    "create" => {
+                                        app.execute("create.file");
+                                    }
+                                    "combine" => {
+                                        app.execute("page.combine");
+                                    }
+                                    _ => {}
                                 }
                             }
                         }

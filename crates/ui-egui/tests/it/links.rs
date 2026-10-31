@@ -1,5 +1,4 @@
-//! Community links: the Discord button is one click away everywhere; Help menu, About dialog and
-//! home screen open the ArtCraft and PdfCraft pages.
+//! AlePdf community links distinguish following the creator from starring the repository.
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
@@ -44,5 +43,22 @@ fn help_commands_open_each_link() {
         assert!(h.state_mut().execute(l.command), "{}", l.command);
         assert_eq!(h.state().last_opened_url.as_deref(), Some(l.url));
         assert_eq!(pdfcraft_engine::commands::command(l.command).unwrap().menu, Some("Help"));
+    }
+}
+
+#[test]
+fn home_and_about_distinguish_follow_from_star() {
+    for about in [false, true] {
+        let mut h = harness(move |app| {
+            if about {
+                app.dialog = Some(Dialog::About);
+            }
+        });
+        h.query_all_by_label("Follow @themanoftalent").last().unwrap().click();
+        h.run_steps(2);
+        assert_eq!(h.state().last_opened_url.as_deref(), Some(links::WEBSITE));
+        h.query_all_by_label("Star AlePdf").last().unwrap().click();
+        h.run_steps(2);
+        assert_eq!(h.state().last_opened_url.as_deref(), Some(links::GITHUB));
     }
 }

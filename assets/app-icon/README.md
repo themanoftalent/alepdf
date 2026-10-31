@@ -54,3 +54,7 @@ sidecar. This provides a file type icon; first-page thumbnails still need a thum
 packaging/icons.sh        # needs resvg and python3; iconutil (macOS) for the .icns
 cargo xtask assets        # then update the sha256 values in ATTRIBUTION.toml and run with --write
 ```
+
+## Windows preview restoration (2026-10-31)
+
+The Windows preview worktree restores the licensed original lion artwork from the master SVG, replacing raster/icon files whose imagery did not match this provenance. PNG/ICO derivatives were regenerated with the installed ImageMagick 7.1.2-34 renderer through packaging/icons.sh. The ICNS contains the regenerated 1024px PNG in an ic10 chunk; it is retained for source consistency and is not a Windows payload. No installed macOS app was changed. Original licence and copyright remain unchanged.

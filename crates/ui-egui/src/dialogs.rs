@@ -1479,7 +1479,6 @@ fn dialog_shortcuts(ui: &mut egui::Ui) -> bool {
 /// `Dialog::About` content. Returns `false` when it has its own buttons and no footer is wanted.
 fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
     let t = Tokens::get(ui.ctx());
-    let _ = req;
     ui.vertical_centered(|ui| {
         widgets::alepdf_logo(ui, 56.0);
         ui.add_space(6.0);
@@ -1490,37 +1489,26 @@ fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
                 .color(t.text_muted),
         );
         ui.add_space(10.0);
-        ui.label(
-            egui::RichText::new("A fast, secure, native PDF suite written in Rust.")
-                .font(theme::medium(13.0)),
-        );
+        ui.label(egui::RichText::new("A fast, secure, native PDF suite written in Rust.").font(theme::medium(13.0)));
         ui.add_space(6.0);
-        ui.label(
-            egui::RichText::new("Open source under MIT OR Apache-2.0 license.")
-                .font(theme::regular(12.0))
-                .color(t.text_muted),
-        );
+        ui.label(egui::RichText::new("Open source under MIT OR Apache-2.0 license.").font(theme::regular(12.0)).color(t.text_muted));
         ui.add_space(14.0);
         ui.separator();
         ui.add_space(10.0);
 
-        ui.label(
-            egui::RichText::new("Developed & customized by:")
-                .font(theme::semibold(12.0))
-                .color(t.text_muted),
-        );
+        ui.label(egui::RichText::new("Created by:").font(theme::semibold(12.0)).color(t.text_muted));
         ui.add_space(4.0);
-        ui.label(egui::RichText::new("SoftAI Yazılım").font(theme::semibold(14.0)));
-        ui.label(
-            egui::RichText::new("Assoc. Prof. Dr. Mehmet Akif Cifci (@themanoftalent)")
-                .font(theme::regular(13.0)),
-        );
+        ui.label(egui::RichText::new("AlePdf").font(theme::semibold(14.0)));
+        ui.label(egui::RichText::new("Assoc. Prof. Dr. Mehmet Akif Cifci (@themanoftalent)").font(theme::regular(13.0)));
 
         ui.add_space(10.0);
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
-            if ui.button(egui::RichText::new("</>  GitHub").font(theme::medium(12.0))).clicked() {
-                ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/themanoftalent"));
+            if widgets::pill_button(ui, "Follow @themanoftalent", true).clicked() {
+                req.link_command = Some("help.website");
+            }
+            if ui.button(egui::RichText::new("Star AlePdf").strong()).clicked() {
+                req.link_command = Some("help.github");
             }
             if ui.button(egui::RichText::new("❤️  Sponsor Me").font(theme::medium(12.0))).clicked() {
                 ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/sponsors/themanoftalent"));

@@ -517,18 +517,15 @@ pub fn mode_bar(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                         // Google Drive Save & Sync button
                         let in_gdrive = app.is_active_in_google_drive();
                         let gdrive_icon = if in_gdrive { "cloud" } else { "cloud-upload" };
-                        let gdrive_tip = if in_gdrive {
-                            tl!("Synced with Google Drive (click to sync latest changes)")
-                        } else {
-                            tl!("Save to Google Drive & sync with cloud")
-                        };
-                        let gdrive_resp = icons::button(ui, gdrive_icon, 32.0, in_gdrive, &gdrive_tip);
+                        let gdrive_tip =
+                            if in_gdrive { tl!("Save changes to your Google Drive folder") } else { tl!("Save to your Google Drive folder") };
+                        let gdrive_resp = icons::button(ui, gdrive_icon, 32.0, in_gdrive, gdrive_tip);
                         if gdrive_resp.clicked() {
                             app.save_or_sync_to_google_drive();
                         }
                         egui::Popup::context_menu(&gdrive_resp).id(gdrive_resp.id.with("gdrive_ctx")).show(|ui| {
                             if in_gdrive {
-                                if ui.button(tl!("Sync with Google Drive now")).clicked() {
+                                if ui.button(tl!("Save changes to Google Drive folder")).clicked() {
                                     app.save_or_sync_to_google_drive();
                                     ui.close();
                                 }

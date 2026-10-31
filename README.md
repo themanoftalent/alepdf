@@ -27,10 +27,6 @@
   <a href="#license">License</a>
 </p>
 
-<p align="center">
-  <img src="assets/screenshots/alepdf-welcome.png" width="95%" alt="AlePdf Welcome & Tools Hub">
-</p>
-
 ---
 
 ## Overview
@@ -111,7 +107,7 @@ AlePdf organizes your document workflow into dedicated, distraction-free workspa
 
 ## Building from Source
 
-Building AlePdf requires Rust 1.85+ and macOS command-line tools.
+Building AlePdf requires Rust 1.95+ and macOS command-line tools.
 
 ### 1. Prerequisites
 
@@ -125,7 +121,7 @@ rustup target add aarch64-apple-darwin x86_64-apple-darwin
 ### 2. Clone and Run
 
 ```bash
-git clone https://github.com/alepdf/alepdf.git
+git clone https://github.com/themanoftalent/alepdf.git
 cd alepdf
 
 # Run native desktop app in debug mode

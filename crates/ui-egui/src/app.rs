@@ -224,6 +224,7 @@ impl PdfCraftApp {
             signature: None,
             initials: None,
             signature_draft: Default::default(),
+            drive_collision: None,
             signature_preview: None,
             signature_photo: None,
             saved_signature_previews: [None, None],
@@ -276,6 +277,7 @@ impl PdfCraftApp {
     /// on the document underneath it.
     pub(crate) fn modal_open(&self) -> bool {
         self.dialog.is_some()
+            || self.drive_collision.is_some()
             || self.close_request.is_some()
             || self.password_prompt.is_some()
             || self.unlock_prompt.is_some()
@@ -560,6 +562,7 @@ impl eframe::App for PdfCraftApp {
                 }
             });
             dialogs::show(self, &ctx);
+            self.show_drive_collision(&ctx);
             // Notices too: a refused field value or a failed save must be seen in full screen.
             self.show_progress(&ctx);
             widgets::toast(self, &ctx);
@@ -599,6 +602,7 @@ impl eframe::App for PdfCraftApp {
         self.process_pending_edits();
         palette::show(self, &ctx);
         dialogs::show(self, &ctx);
+        self.show_drive_collision(&ctx);
         self.show_progress(&ctx);
         widgets::toast(self, &ctx);
         self.finish_render_frame(&ctx);

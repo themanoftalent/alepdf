@@ -157,6 +157,23 @@ impl PdfCraftApp {
     /// Write document `id` to `dest` and make it the document's file. Returns `true` if written.
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn save_doc_to(&mut self, id: pdfcraft_engine::DocId, dest: &str, target: SaveTarget) -> bool {
+        self.save_doc_to_with(id, dest, target, write_atomically)
+    }
+
+    /// Save a new copy without replacing a file that appeared since the picker/confirmation.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn save_doc_to_new(&mut self, id: pdfcraft_engine::DocId, dest: &str) -> bool {
+        self.save_doc_to_with(id, dest, SaveTarget::As, crate::google_drive::write_new_copy)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn save_doc_to_with(
+        &mut self,
+        id: pdfcraft_engine::DocId,
+        dest: &str,
+        target: SaveTarget,
+        write: impl FnOnce(&str, &[u8]) -> std::io::Result<()>,
+    ) -> bool {
         // Save As answers on a later frame: commit what was typed meanwhile, too (#166), even
         // if another tab is active by then.
         if !self.commit_typing_in(id) || !self.flatten_fill_sign_for_save(id) {
@@ -183,7 +200,7 @@ impl PdfCraftApp {
                 return false;
             }
         };
-        if let Err(e) = write_atomically(dest, &bytes) {
+        if let Err(e) = write(dest, &bytes) {
             self.notify_fmt("Couldn't save {name}: {e}", &[("name", dest), ("e", &e.to_string())]);
             return false;
         }

@@ -22,6 +22,8 @@
 param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
   [switch] $SkipBuild,
+  # Portable preview builds do not install WiX or mutate installer registration.
+  [switch] $PortableOnly,
   # -SkipBuild only: the existing binaries were built without CRAFT_FONTS_DIR, so they embed no
   # craft-fonts faces. Without CRAFT_FONTS_DIR this assertion is required: package.ps1 cannot
   # otherwise know whether the binaries need the fonts' OFL notices.
@@ -153,6 +155,7 @@ if ($env:CRAFT_FONTS_DIR) {
 # ---- end font notices for the MSI --------------------------------------------------------------
 
 # ---- MSI ---------------------------------------------------------------------------------------
+if (-not $PortableOnly) {
 $Msi = Join-Path $Dist "AlePdf-$Version-windows-$Arch.msi"
 Invoke-Native 'wix build' {
   wix build (Join-Path $PSScriptRoot 'pdfcraft.wxs') -arch $Arch `
@@ -175,6 +178,8 @@ if ($env:RUN_UPSTREAM_TESTS) {
 Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
 & (Join-Path $PSScriptRoot 'sign.ps1') $Msi
 
+}
+
 # ---- portable zip ------------------------------------------------------------------------------
 $Portable = Join-Path $TargetDir "windows-package\AlePdf-$Version-windows-$Arch-portable"
 Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
@@ -191,7 +196,47 @@ foreach ($f in 'README.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE') {
 if ($HasCraftFontLicences -eq 1) {
   Copy-Item (Join-Path $Docs 'OFL-*.txt') $Portable
 }
+# Carry the licences for embedded original app artwork and all bundled Latin fonts.
+Copy-Item (Join-Path $Root 'assets\app-icon\LICENSE.txt') (Join-Path $Portable 'LICENSE-app-icon.txt')
+Copy-Item (Join-Path $Root 'assets\fonts\OFL-*.txt') $Portable
 Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $Portable
+# Preserve dependency notices from the exact resolved package sources, including egui fonts.
+Push-Location $Root
+try {
+  $MetadataJson = cargo metadata --locked --format-version 1 --filter-platform $Target
+  if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve dependency licence sources.' }
+  $Metadata = ($MetadataJson -join "`n") | ConvertFrom-Json
+} finally { Pop-Location }
+$LegalRoot = Join-Path $Portable 'THIRD-PARTY-LICENSES'
+New-Item -ItemType Directory -Force -Path $LegalRoot | Out-Null
+foreach ($Package in $Metadata.packages) {
+  $PackageRoot = Split-Path $Package.manifest_path
+  $PackageLegal = Join-Path $LegalRoot "$($Package.name)-$($Package.version)"
+  $LegalFiles = @(Get-ChildItem -LiteralPath $PackageRoot -File | Where-Object { $_.Name -match '(?i)licen[sc]e|^copying|^notice|^copyright' })
+  $Fonts = Join-Path $PackageRoot 'fonts'
+  if (Test-Path -LiteralPath $Fonts -PathType Container) {
+    $LegalFiles += @(Get-ChildItem -LiteralPath $Fonts -File -Filter '*.txt')
+  }
+  if ($Package.license_file) {
+    $Declared = Join-Path $PackageRoot $Package.license_file
+    if (-not (Test-Path -LiteralPath $Declared)) { throw "Missing declared licence file for $($Package.name)" }
+    $LegalFiles += Get-Item -LiteralPath $Declared
+  }
+  foreach ($LegalFile in ($LegalFiles | Sort-Object FullName -Unique)) {
+    $Relative = [IO.Path]::GetRelativePath($PackageRoot, $LegalFile.FullName)
+    if ($Relative.StartsWith('..')) { throw "Licence escapes package root: $($Package.name)" }
+    $Destination = Join-Path $PackageLegal $Relative
+    New-Item -ItemType Directory -Force -Path (Split-Path $Destination) | Out-Null
+    Copy-Item -LiteralPath $LegalFile.FullName -Destination $Destination
+  }
+}
+foreach ($Required in 'UFL.txt', 'Hack-Regular.txt', 'OFL.txt', 'emoji-icon-font-mit-license.txt') {
+  if (-not (Get-ChildItem -LiteralPath $LegalRoot -Recurse -File -Filter $Required)) { throw "Missing bundled font notice: $Required" }
+}
+Copy-Item (Join-Path $Root 'assets\icons\LICENSE-lucide.txt') $Portable
+Copy-Item (Join-Path $Root 'vendor\hayro-cmap\assets\LICENSE.txt') (Join-Path $Portable 'LICENSE-CMap.txt')
+Copy-Item (Join-Path $Root 'vendor\hayro-interpret\assets\LICENSE_FOXIT') $Portable
+Copy-Item (Join-Path $Root 'vendor\hayro-interpret\assets\CGATS_LICENSE.txt') $Portable
 $Zip = Join-Path $Dist "AlePdf-$Version-windows-$Arch-portable.zip"
 Remove-Item -Force $Zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $Portable -DestinationPath $Zip
@@ -205,4 +250,5 @@ if ($Arch -ne 'arm64' -or $HostArch -eq 'arm64') {
 } else {
   Write-Output "skipping pdfcraft-cli --version: an $Arch build doesn't run on this $HostArch machine"
 }
-Get-Item $Msi, $Zip | Format-Table Name, Length
+if ($PortableOnly) { Get-Item $Zip | Format-Table Name, Length }
+else { Get-Item $Msi, $Zip | Format-Table Name, Length }

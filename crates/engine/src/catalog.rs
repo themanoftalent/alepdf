@@ -124,7 +124,7 @@ pub static TOOL_GROUPS: &[ToolGroup] = &[
         icon: "file-pen-line",
         hue: PINK,
         badge: None,
-        availability: Planned("M7"),
+        availability: Ready,
         sections: &[
             ToolSection {
                 title: "Modify page",
@@ -277,7 +277,7 @@ pub static TOOL_GROUPS: &[ToolGroup] = &[
         icon: "shield-check",
         hue: BLUE,
         badge: None,
-        availability: Planned("M8"),
+        availability: Ready,
         sections: &[
             ToolSection {
                 title: "Protect",
