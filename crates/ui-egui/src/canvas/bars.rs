@@ -370,7 +370,8 @@ pub(super) fn quick_bar(app: &mut PdfCraftApp, area: Rect, ui: &mut egui::Ui) {
                     let shown = current_fill.unwrap_or(crate::fill_sign::FillTool::Text);
                     let resp = icons::button(
                         ui,
-                        if current_fill.is_some() { shown.icon() } else { "pen-line" },
+                        // A handwritten signature is distinct from the adjacent Draw pencil.
+                        if current_fill.is_some() { shown.icon() } else { "signature" },
                         32.0,
                         current_fill.is_some(),
                         tl!("Fill & Sign"),

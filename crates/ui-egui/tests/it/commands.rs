@@ -46,6 +46,29 @@ fn harness() -> Harness<'static, PdfCraftApp> {
     h
 }
 
+#[test]
+fn draw_and_fill_toolbar_activation_preserves_localized_labels() {
+    use pdfcraft_ui_egui::{QuickTool, comments::CommentTool, fill_sign::FillTool};
+    for (language, draw, fill) in [("en", "Draw", "Fill & Sign"), ("tr", "Çiz", "Doldur ve İmzala")] {
+        for theme in ["light", "dark"] {
+            let mut h = harness();
+            h.state_mut().set_option("language", language).unwrap();
+            h.state_mut().set_option("theme", theme).unwrap();
+            h.run_steps(4);
+            h.get_by_label(draw).click();
+            h.run_steps(4);
+            assert_eq!(h.state().quick_tool, QuickTool::Comment(CommentTool::Ink));
+            h.get_all_by_label(fill).find(|n| (n.rect().width() - 32.0).abs() < 0.1).expect("the compact Fill & Sign toolbar button").click();
+            h.run_steps(4);
+            assert_eq!(h.state().quick_tool, QuickTool::Fill(FillTool::Text));
+            h.get_by_label(draw).click();
+            h.run_steps(4);
+            assert_eq!(h.state().quick_tool, QuickTool::Comment(CommentTool::Ink));
+            assert!(!h.state().session.get(h.state().views[0].id).unwrap().dirty, "switching tools must not edit the PDF");
+        }
+    }
+}
+
 /// Commands that open a native file picker can't run headless.
 /// (Create ▸ Clipboard reads the system clipboard: tests use `create_from_clip`.)
 const PICKERS: &[&str] = &[

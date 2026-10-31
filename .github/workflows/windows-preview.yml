@@ -43,6 +43,10 @@ jobs:
         run: |
           cargo test --locked -p pdfcraft-ui-egui --test it home_tool_entry -j 2
           exit $LASTEXITCODE
+      - name: Validate localized Draw and Fill toolbar activation
+        run: |
+          cargo test --locked -p pdfcraft-ui-egui --test it draw_and_fill_toolbar -j 2
+          exit $LASTEXITCODE
       - name: Validate image replacement workflow
         run: |
           cargo test --locked -p pdfcraft-ui-egui --test it image_replace -j 2
