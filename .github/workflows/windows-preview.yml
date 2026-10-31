@@ -7,7 +7,7 @@ permissions:
   contents: write
 concurrency:
   group: alepdf-windows-preview-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   windows-x64:
     runs-on: windows-latest

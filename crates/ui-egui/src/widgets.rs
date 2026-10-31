@@ -564,7 +564,7 @@ pub fn alepdf_logo(ui: &mut egui::Ui, size: f32) -> Response {
 fn alepdf_logo_color_image() -> &'static egui::ColorImage {
     static IMAGE: std::sync::OnceLock<egui::ColorImage> = std::sync::OnceLock::new();
     IMAGE.get_or_init(|| {
-        let bytes = include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png");
+        let bytes = include_bytes!("../../../assets/app-icon/alepdf-cat.png");
         match image::load_from_memory(bytes) {
             Ok(img) => {
                 let rgba = img.to_rgba8();
