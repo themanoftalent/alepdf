@@ -505,9 +505,7 @@ impl PdfCraftApp {
             "ocr.recognize" => self.dialog = Some(Dialog::RecognizeText),
             "ocr.recognize_batch" => self.ocr_files_dialog(),
             "edit.edit_text" => {
-                self.quick_tool = crate::QuickTool::EditText;
-                self.left = crate::LeftPanel::Tool("edit");
-                self.reveal_tools();
+                self.select_mode(crate::Mode::Edit);
                 self.notify_tr("Click text or an image to edit it");
             }
             "edit.advanced_search" => {

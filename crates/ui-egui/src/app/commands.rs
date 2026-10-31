@@ -59,6 +59,13 @@ impl PdfCraftApp {
     /// Enter a tool from the catalogue, Home, palette or control channel. Organize is a
     /// workspace, so opening its panel also opens the page grid (without toggling it off).
     pub(crate) fn select_tool(&mut self, id: &'static str) {
+        if id == "edit" {
+            if self.active.is_none() && (self.pickers.pending() || !self.pending_opens.is_empty() || self.modal_open()) {
+                return;
+            }
+            self.run_command("edit.edit_text");
+            return;
+        }
         // The tool's panel shows, not the expanded All tools view over it.
         self.all_tools_full = false;
         self.left = LeftPanel::Tool(id);
@@ -75,6 +82,10 @@ impl PdfCraftApp {
     /// Select the workspace and its matching tool panel, just like the mode bar. The tool goes
     /// with the workspace as [`Self::enter_mode`] sets it.
     pub(crate) fn select_mode(&mut self, mode: Mode) {
+        if mode == Mode::Edit && self.active.is_none() {
+            self.select_tool("edit");
+            return;
+        }
         self.enter_mode(mode);
         self.reveal_tools();
         if let Some(view) = self.active.and_then(|i| self.views.get_mut(i)) {

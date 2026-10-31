@@ -692,3 +692,64 @@ fn ctrl_tab_steps_through_the_tabs_in_order_and_wraps_around() {
         assert!(!doc.dirty, "switching tabs changes no document");
     }
 }
+
+#[test]
+fn edit_entry_opens_a_pdf_then_enters_editing_and_reuses_current_document() {
+    let dir = std::env::temp_dir().join(format!("alepdf-edit-entry-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("edit.pdf");
+    std::fs::write(&path, fixture(1)).unwrap();
+    let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+        let mut app = PdfCraftApp::new();
+        app.set_option("language", "en").unwrap();
+        app.pick_override = Some(vec![path.to_string_lossy().into_owned()]);
+        app
+    });
+    h.run_steps(2);
+    h.get_all_by_label("Edit a PDF").last().unwrap().click();
+    h.run_steps(1);
+    // Repeated tool activation must not queue a second picker while the first result opens.
+    h.state_mut().set_option("tool", "edit").unwrap();
+    support::wait_until(&mut h, "Edit PDF opens its picked file", |a| a.active.is_some());
+    assert_eq!(h.state().views.len(), 1);
+    assert_eq!(h.state().quick_tool, pdfcraft_ui_egui::QuickTool::EditText);
+    assert_eq!(h.state().mode, pdfcraft_ui_egui::Mode::Edit);
+    h.state_mut().pick_override = Some(vec![path.to_string_lossy().into_owned()]);
+    h.state_mut().set_option("tool", "edit").unwrap();
+    h.run_steps(3);
+    assert_eq!(h.state().mode, pdfcraft_ui_egui::Mode::Edit);
+    assert_eq!(h.state().views.len(), 1);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn edit_entry_cancel_and_open_failure_leave_home_unchanged_and_allow_retry() {
+    let dir = std::env::temp_dir().join(format!("alepdf-edit-retry-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("retry.pdf");
+    std::fs::write(&path, fixture(1)).unwrap();
+    for paths in [Vec::new(), vec![dir.join("missing.pdf").to_string_lossy().into_owned()]] {
+        let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(|_| {
+            let mut app = PdfCraftApp::new();
+            app.set_option("language", "en").unwrap();
+            app.pick_override = Some(paths);
+            app
+        });
+        h.run_steps(2);
+        let mode = h.state().mode;
+        let tool = h.state().quick_tool;
+        h.state_mut().set_option("tool", "edit").unwrap();
+        assert!(matches!(h.state().left, pdfcraft_ui_egui::LeftPanel::AllTools), "wait for a document before selecting Edit");
+        h.run_steps(5);
+        assert!(h.state().active.is_none());
+        assert_eq!(h.state().mode, mode);
+        assert_eq!(h.state().quick_tool, tool);
+        h.state_mut().pick_override = Some(vec![path.to_string_lossy().into_owned()]);
+        h.state_mut().set_option("tool", "edit").unwrap();
+        assert!(matches!(h.state().left, pdfcraft_ui_egui::LeftPanel::AllTools));
+        support::wait_until(&mut h, "retry opens the selected PDF", |a| a.active.is_some());
+        assert_eq!(h.state().mode, pdfcraft_ui_egui::Mode::Edit);
+        assert_eq!(h.state().views.len(), 1);
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}

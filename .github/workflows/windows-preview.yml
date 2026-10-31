@@ -1,7 +1,7 @@
 name: AlePdf Windows preview validation
 on:
   push:
-    branches: [feat/windows-preview]
+    branches: [feat/windows-preview, fix/edit-open-flow]
   workflow_dispatch:
 permissions:
   contents: write
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   windows-x64:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       CARGO_BUILD_JOBS: '2'
       PDFCRAFT_SYSTEM_FONTS: '0'
@@ -30,6 +30,13 @@ jobs:
           rustup default 1.95.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           rustup target add x86_64-pc-windows-msvc
+          exit $LASTEXITCODE
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          key: alepdf-windows-preview
+      - name: Validate Edit PDF open workflow
+        run: |
+          cargo test --locked -p pdfcraft-ui-egui --test it edit_entry -j 2
           exit $LASTEXITCODE
       - name: Validate Drive collision behavior on Windows
         run: |
@@ -86,7 +93,7 @@ jobs:
           $Checksums = $Files | ForEach-Object { $H = Get-FileHash $_.FullName -Algorithm SHA256; "$($H.Hash.ToLower())  $($_.Name)" }
           $Checksums | Set-Content dist/release/SHA256SUMS-windows.txt
           $Notes = @'
-          AlePdf Windows x64 unsigned preview. Source asset audit, Windows collision tests, portable extraction/CLI, EXE installation/uninstallation and GUI window startup passed. Interactive document editing/signing and other Windows devices have not been tested. No certificate identity verification is claimed; do not disable OS security protections. Original licenses and font/model notices are bundled. This is a prerelease, not a stable release.
+          AlePdf Windows x64 unsigned preview. Edit PDF picker workflow regression tests, source asset audit, Windows collision tests, portable extraction/CLI, EXE installation/uninstallation and GUI window startup passed. Interactive document editing/signing and other Windows devices have not been tested. No certificate identity verification is claimed; do not disable OS security protections. Original licenses and font/model notices are bundled. This is a prerelease, not a stable release.
           '@
           $Notes | Set-Content dist/release/WINDOWS-RELEASE-NOTES.txt
           $Tag = "alepdf-windows-preview-${{ github.run_number }}"
