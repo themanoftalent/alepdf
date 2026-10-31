@@ -1,0 +1,76 @@
+name: AlePdf macOS preview release
+on:
+  push:
+    branches: [feat/macos-preview]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos-arm64:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '2'
+      MACOSX_DEPLOYMENT_TARGET: '11.0'
+      PDFCRAFT_BUILD_LABEL: mac-preview.${{ github.run_number }}
+      PDFCRAFT_BUILD_SHA: ${{ github.sha }}
+      PDFCRAFT_SYSTEM_FONTS: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Build native Apple Silicon preview and validate source assets
+        run: |
+          test "$(uname -m)" = arm64
+          cargo build --locked --release -p pdfcraft -j 2
+          cargo xtask assets
+          cargo xtask models target/preview-models
+          cargo metadata --locked --format-version 1 --filter-platform aarch64-apple-darwin > target/metadata.json
+          target/release/alepdf --version
+      - name: Assemble app with required notices
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,plistlib,shutil,subprocess,tomllib,re,os
+          root=Path.cwd();app=root/'dist/mac-preview/AlePdf.app';res=app/'Contents/Resources'
+          (app/'Contents/MacOS').mkdir(parents=True);res.mkdir()
+          shutil.copy2(root/'target/release/alepdf',app/'Contents/MacOS/AlePdf')
+          for src,dst in [('assets/app-icon/pdfcraft.icns','AlePdf.icns'),('packaging/macos/Credits.rtf','Credits.rtf'),('NOTICE','NOTICE'),('LICENSE-MIT','LICENSE-MIT'),('LICENSE-APACHE','LICENSE-APACHE'),('ATTRIBUTION.md','ATTRIBUTION.md')]:shutil.copy2(root/src,res/dst)
+          legal=res/'Licenses';m=tomllib.loads((root/'ATTRIBUTION.toml').read_text())
+          for row in m['asset']:
+            if p:=row.get('licence_file'):
+              d=legal/p;d.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(root/p,d)
+          for pkg in json.loads((root/'target/metadata.json').read_text())['packages']:
+            parent=Path(pkg['manifest_path']).parent
+            files=[p for p in parent.iterdir() if p.is_file() and re.search('licen[cs]e|^copying|^notice|^copyright',p.name,re.I)]
+            if (parent/'fonts').is_dir():files+=list((parent/'fonts').glob('*.txt'))
+            if pkg.get('license_file'):files.append(parent/pkg['license_file'])
+            for p in set(files):
+              d=legal/'dependencies'/(pkg['name']+'-'+pkg['version'])/p.relative_to(parent);d.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,d)
+          for n in ['UFL.txt','Hack-Regular.txt','OFL.txt','emoji-icon-font-mit-license.txt']:assert list(legal.rglob(n)),n
+          shutil.copytree(root/'target/preview-models',res/'models')
+          template=(root/'packaging/macos/Info.plist.in').read_text().replace('@VERSION@','0.15.0+'+os.environ['PDFCRAFT_BUILD_LABEL']).replace('@SHORT_VERSION@','0.15.0').replace('@BUILD_SHA@',os.environ['GITHUB_SHA'])
+          info=plistlib.loads(template.encode());info['AlePdfBuildLabel']=os.environ['PDFCRAFT_BUILD_LABEL'];(app/'Contents/Info.plist').write_bytes(plistlib.dumps(info));(app/'Contents/PkgInfo').write_bytes(b'APPL????')
+          for p in [app/'Contents/MacOS/AlePdf',app]:subprocess.run(['codesign','--force','--sign','-','--timestamp=none','--options','runtime','--entitlements',str(root/'packaging/macos/entitlements.plist'),str(p)],check=True)
+          PY
+      - name: Create and verify DMG
+        run: |
+          codesign --verify --deep --strict dist/mac-preview/AlePdf.app
+          printf '%s\n' 'AlePdf Apple Silicon preview. Ad-hoc signed, not notarized. Do not disable macOS security protections. Source asset audit and packaging checks passed. Interactive testing and device coverage are limited. Licenses and notices are inside the app Resources folder.' > dist/mac-preview/RELEASE-NOTES.txt
+          hdiutil create -volname 'AlePdf Preview' -srcfolder dist/mac-preview -format UDZO -o dist/AlePdf-0.15.0-macos-arm64-preview.dmg
+          hdiutil verify dist/AlePdf-0.15.0-macos-arm64-preview.dmg
+          mkdir -p target/dmg-check
+          hdiutil attach -readonly -nobrowse -mountpoint "$PWD/target/dmg-check" dist/AlePdf-0.15.0-macos-arm64-preview.dmg
+          codesign --verify --deep --strict target/dmg-check/AlePdf.app
+          cmp dist/mac-preview/AlePdf.app/Contents/MacOS/AlePdf target/dmg-check/AlePdf.app/Contents/MacOS/AlePdf
+          hdiutil detach target/dmg-check
+          cd dist
+          shasum -a 256 AlePdf-0.15.0-macos-arm64-preview.dmg > SHA256SUMS-macos.txt
+      - name: Upload build for owner review only
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: AlePdf-Mac-review-only
+          path: |
+            dist/AlePdf-0.15.0-macos-arm64-preview.dmg
+            dist/SHA256SUMS-macos.txt
+          if-no-files-found: error
