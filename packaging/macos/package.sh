@@ -117,7 +117,7 @@ echo "==> assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # Executable and icon carry the display name (CFBundleExecutable / CFBundleIconFile).
 cp "$WORK/bin/alepdf" "$APP/Contents/MacOS/AlePdf"
-cp "$ROOT/assets/app-icon/pdfcraft.icns" "$APP/Contents/Resources/AlePdf.icns"
+cp "$ROOT/assets/app-icon/alepdf-cat.icns" "$APP/Contents/Resources/AlePdf.icns"
 # Required embedded-font notices are independent of optional font inputs.
 cp "$ROOT/NOTICE" "$APP/Contents/Resources/NOTICE"
 # The standard About panel (AlePdf menu > About AlePdf) shows Credits.rtf under the version.

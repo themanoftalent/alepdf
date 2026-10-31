@@ -160,7 +160,7 @@ $Msi = Join-Path $Dist "AlePdf-$Version-windows-$Arch.msi"
 Invoke-Native 'wix build' {
   wix build (Join-Path $PSScriptRoot 'pdfcraft.wxs') -arch $Arch `
     (Join-Path $PSScriptRoot 'installer-ui.wxs') `
-    -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "ModelsDir=$Models" -d "IconPath=$(Join-Path $Root 'assets\app-icon\pdfcraft.ico')" `
+    -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "ModelsDir=$Models" -d "IconPath=$(Join-Path $Root 'assets\app-icon\alepdf-cat.ico')" `
     -d "DocsDir=$Docs" -d "HasCraftFontLicences=$HasCraftFontLicences" `
     -o $Msi
 }
@@ -198,6 +198,7 @@ if ($HasCraftFontLicences -eq 1) {
 }
 # Carry the licences for embedded original app artwork and all bundled Latin fonts.
 Copy-Item (Join-Path $Root 'assets\app-icon\LICENSE.txt') (Join-Path $Portable 'LICENSE-app-icon.txt')
+Copy-Item (Join-Path $Root 'assets\app-icon\ALEPDF-CAT-PROVENANCE.txt') $Portable
 Copy-Item (Join-Path $Root 'assets\fonts\OFL-*.txt') $Portable
 Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $Portable
 # Preserve dependency notices from the exact resolved package sources, including egui fonts.
