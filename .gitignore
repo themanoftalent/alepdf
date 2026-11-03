@@ -9,3 +9,11 @@ plan/
 /assets/models
 # A craft-fonts checkout used as the optional CRAFT_FONTS_DIR build input (CI and releases put it here).
 /craft-fonts
+
+# Sensitive & local configs
+*.pem
+*.key
+rarreg.key
+local.properties
+*.bak
+.DS_Store
