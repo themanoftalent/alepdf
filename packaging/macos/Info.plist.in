@@ -13,7 +13,7 @@
   <key>CFBundleExecutable</key>
   <string>AlePdf</string>
   <key>CFBundleIdentifier</key>
-  <string>com.alepdf.editor</string>
+  <string>ai.storyteller.pdfcraft</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -24,8 +24,12 @@
   <string>@SHORT_VERSION@</string>
   <key>CFBundleVersion</key>
   <string>@SHORT_VERSION@</string>
+  <key>PdfCraftVersion</key>
+  <string>@VERSION@</string>
   <key>AlePdfVersion</key>
   <string>@VERSION@</string>
+  <key>PdfCraftBuildCommit</key>
+  <string>@BUILD_SHA@</string>
   <key>AlePdfBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
