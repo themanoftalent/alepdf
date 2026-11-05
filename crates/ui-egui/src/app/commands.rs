@@ -56,8 +56,7 @@ impl PdfCraftApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn open_then_tool(&mut self, id: &'static str) {
         self.startup_superseded = true;
-        let title = pdfcraft_engine::catalog::group(id)
-            .map_or_else(|| tl!("Open file").to_string(), |g| tl!(g.label).to_string());
+        let title = pdfcraft_engine::catalog::group(id).map_or_else(|| tl!("Open file").to_string(), |g| tl!(g.label).to_string());
         let dialog = Self::open_picker().set_title(title);
         self.ask_one(pickers::Ask::File(dialog), None, move |app, path| {
             let path = path.to_string_lossy().into_owned();

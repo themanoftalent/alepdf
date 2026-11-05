@@ -28,10 +28,7 @@ fn website_button_in_the_top_bar_opens_website() {
 
 #[test]
 fn home_screen_links() {
-    for (label, url) in [
-        ("AlePdf Website", links::WEBSITE),
-        ("AlePdf on GitHub", "https://github.com/themanoftalent/alepdf"),
-    ] {
+    for (label, url) in [("AlePdf Website", links::WEBSITE), ("AlePdf on GitHub", "https://github.com/themanoftalent/alepdf")] {
         let mut h = harness(|_| {});
         h.get_by_label("AlePdf");
         h.get_by_label(label).click();
