@@ -916,7 +916,7 @@ pub(crate) fn run_edit(doc: &mut pdfcraft_cos::Document, edit: &Edit, cx: &mut E
     Ok(())
 }
 
-fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document, page: usize) {
+pub(crate) fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document, page: usize) {
     let Ok(lines) = pdfcraft_edit::text::text_lines(doc, page) else { return };
     let line_rects: Vec<[f64; 4]> = lines.into_iter().filter(|l| !l.text.trim().is_empty()).map(|l| l.rect).collect();
 
@@ -943,6 +943,7 @@ fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document, page: usi
             let mut new_max_x = f64::NEG_INFINITY;
             let mut new_min_y = f64::INFINITY;
             let mut new_max_y = f64::NEG_INFINITY;
+            let mut quads_changed = false;
 
             for chunk in numbers.chunks_exact(8) {
                 let xs = [chunk[0], chunk[2], chunk[4], chunk[6]];
@@ -952,21 +953,40 @@ fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document, page: usi
                 let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
                 let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
-                let has_text = line_rects.iter().any(|lr| {
-                    (lr[0] - 2.0) <= max_x && (lr[2] + 2.0) >= min_x && (lr[1] - 2.0) <= max_y && (lr[3] + 2.0) >= min_y
-                });
-                if has_text {
-                    surviving_quads.extend_from_slice(chunk);
-                    new_min_x = new_min_x.min(min_x);
-                    new_max_x = new_max_x.max(max_x);
-                    new_min_y = new_min_y.min(min_y);
-                    new_max_y = new_max_y.max(max_y);
+                let intersecting: Vec<&[f64; 4]> = line_rects
+                    .iter()
+                    .filter(|lr| (lr[0] - 2.0) <= max_x && (lr[2] + 2.0) >= min_x && (lr[1] - 2.0) <= max_y && (lr[3] + 2.0) >= min_y)
+                    .collect();
+
+                if !intersecting.is_empty() {
+                    let t_min_x = intersecting.iter().map(|lr| lr[0]).fold(f64::INFINITY, f64::min).max(min_x);
+                    let t_max_x = intersecting.iter().map(|lr| lr[2]).fold(f64::NEG_INFINITY, f64::max).min(max_x);
+                    if t_max_x > t_min_x + 1.0 {
+                        if (t_min_x - min_x).abs() > 2.0 || (t_max_x - max_x).abs() > 2.0 {
+                            quads_changed = true;
+                        }
+                        let quad = [
+                            t_min_x, chunk[1],
+                            t_max_x, chunk[3],
+                            t_min_x, chunk[5],
+                            t_max_x, chunk[7],
+                        ];
+                        surviving_quads.extend_from_slice(&quad);
+                        new_min_x = new_min_x.min(t_min_x);
+                        new_max_x = new_max_x.max(t_max_x);
+                        new_min_y = new_min_y.min(min_y);
+                        new_max_y = new_max_y.max(max_y);
+                    } else {
+                        quads_changed = true;
+                    }
+                } else {
+                    quads_changed = true;
                 }
             }
 
             if surviving_quads.is_empty() {
                 doomed_indices.push(index);
-            } else if surviving_quads.len() < numbers.len() {
+            } else if quads_changed || surviving_quads.len() < numbers.len() {
                 modified_annots.push((index, surviving_quads, [new_min_x, new_min_y, new_max_x, new_max_y]));
             }
         } else if let Some(r_obj) = d.get(b"Rect")
@@ -1000,12 +1020,31 @@ fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document, page: usi
                     pdfcraft_cos::Object::Real(new_rect[3]),
                 ];
                 d.set(b"Rect".as_slice(), pdfcraft_cos::Object::Array(r_arr));
+                if d.get(b"C").is_none() {
+                    d.set(
+                        b"C".as_slice(),
+                        pdfcraft_cos::Object::Array(vec![
+                            pdfcraft_cos::Object::Real(1.0),
+                            pdfcraft_cos::Object::Real(1.0),
+                            pdfcraft_cos::Object::Real(0.0),
+                        ]),
+                    );
+                }
+                d.remove(b"AP");
             });
+            let _ = pdfcraft_annot::set_appearance(doc, r);
         }
     }
 
-    doomed_indices.sort_unstable_by(|a, b| b.cmp(a));
-    for index in doomed_indices {
-        let _ = pdfcraft_annot::delete_annotation(doc, page, index);
+    let doomed_refs: Vec<pdfcraft_cos::ObjRef> = doomed_indices
+        .iter()
+        .filter_map(|&i| annots.get(i).and_then(|item| item.as_ref()))
+        .collect();
+
+    for r in doomed_refs {
+        let cur = pdfcraft_annot::annots(doc, p);
+        if let Some(pos) = cur.iter().position(|item| item.as_ref() == Some(r)) {
+            let _ = pdfcraft_annot::delete_annotation(doc, page, pos);
+        }
     }
 }

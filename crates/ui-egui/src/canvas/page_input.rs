@@ -348,7 +348,13 @@ fn right_click(hits: &PageHits<'_>, under: &[crate::page_router::Hit], view: &mu
     // see none of them.
     let tool_takes_it = match hits.tool {
         QuickTool::AddText => hits.can_modify,
-        QuickTool::EditText => under.iter().any(|h| matches!(h.owner, Owner::Paragraph { .. } | Owner::Picture { .. } | Owner::Objects { .. })),
+        QuickTool::EditText => {
+            if matches!(context, Some(Owner::Comment { .. })) {
+                false
+            } else {
+                under.iter().any(|h| matches!(h.owner, Owner::Paragraph { .. } | Owner::Picture { .. } | Owner::Objects { .. }))
+            }
+        }
         QuickTool::Link => hits.can_modify && matches!(context, Some(Owner::Link { .. })),
         _ => hits.field_tool.is_some(),
     };

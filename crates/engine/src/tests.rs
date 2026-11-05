@@ -8837,6 +8837,30 @@ fn deleting_text_in_edit_cleans_orphaned_highlight_annotations() {
     assert!(highlights.is_empty(), "Orphaned highlight should be deleted when text is deleted");
 }
 
+#[test]
+fn deleting_partial_lines_in_edit_shrinks_and_removes_highlight_quads() {
+    let (mut s, id) = session_with(1);
+    // quad1 covers the text "Page 1" at y=150 (size 24); quad2 is at y=100 where no text exists
+    let quad1 = [20.0, 175.0, 100.0, 175.0, 20.0, 145.0, 100.0, 145.0];
+    let quad2 = [20.0, 120.0, 100.0, 120.0, 20.0, 90.0, 100.0, 90.0];
+    let highlight = NewAnnotation {
+        page: 0,
+        shape: Shape::TextMarkup { kind: Markup::Highlight, quads: vec![quad1, quad2] },
+        style: Default::default(),
+        contents: String::new(),
+        author: String::new(),
+    };
+    s.apply(id, Edit::AddAnnotation(highlight)).unwrap();
+    assert_eq!(s.get(id).unwrap().info.annotations[0].quads.len(), 2);
+
+    // Edit block 0: rewrite text, staying at y=150
+    s.apply(id, Edit::EditTextBlock { page: 0, block: 0, text: "Page 1".into(), style: pdfcraft_edit::BlockStyle::default() }).unwrap();
+
+    let info = &s.get(id).unwrap().info;
+    let hl = info.annotations.iter().find(|a| a.subtype == "Highlight").expect("Highlight should survive on line 1");
+    assert_eq!(hl.quads.len(), 1, "Only quad 1 should survive; orphaned quad 2 should be deleted");
+}
+
 /// A new document, or one restored from recovery, has never been written where it belongs: undo
 /// back to the bytes it was opened from must not make it clean, or closing it would discard the
 /// whole document without asking. Saving makes it clean; Revert of a saved one too.
