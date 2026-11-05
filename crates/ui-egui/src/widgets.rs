@@ -603,6 +603,7 @@ pub fn progress_notice(app: &PdfCraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// The ArtCraft wordmark (Storyteller's brand, docs/brand/; not open source), sized to `height`.
+#[allow(dead_code)]
 pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
     let dark = ui.visuals().dark_mode;
     let (uri, bytes): (&str, &'static [u8]) = if dark {
@@ -614,6 +615,7 @@ pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
 }
 
 /// The ArtCraft mark (brand blue, works on light and dark), `size` points square.
+#[allow(dead_code)]
 pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
     ui.add(
         egui::Image::from_bytes("bytes://artcraft-mark.svg", include_bytes!("../../../docs/brand/artcraft-mark.svg"))
@@ -629,7 +631,7 @@ pub fn community_links(ui: &mut egui::Ui) -> Option<&'static str> {
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
         for (i, l) in pdfcraft_engine::links::LINKS.iter().enumerate() {
-            let resp = if i == 0 { icon_pill(ui, l.icon, tl!("Join our Discord"), true) } else { icon_pill(ui, l.icon, tl!(l.label), false) };
+            let resp = icon_pill(ui, l.icon, tl!(l.label), i == 0);
             if resp.on_hover_text(l.url).clicked() {
                 clicked = Some(l.command);
             }

@@ -13,7 +13,7 @@
   <key>CFBundleExecutable</key>
   <string>AlePdf</string>
   <key>CFBundleIdentifier</key>
-  <string>ai.storyteller.pdfcraft</string>
+  <string>ai.storyteller.alepdf</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -47,7 +47,7 @@
   <key>NSRequiresAquaSystemAppearance</key>
   <false/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © the PdfCraft authors. MIT OR Apache-2.0.</string>
+  <string>Copyright © TheManOfTalent. All rights reserved.</string>
 
   <!-- Documents PdfCraft opens (#73): it is offered under Open With and can be made the default
        for PDFs, without taking over from the system's viewer on install ("Alternate"). Declared by

@@ -76,9 +76,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
-            ui.label(egui::RichText::new(tl!("Welcome to PdfCraft")).font(theme::semibold(24.0)));
+            ui.label(egui::RichText::new("Welcome to AlePdf").font(theme::semibold(24.0)));
             ui.label(
-                egui::RichText::new(tl!("An open-source PDF workbench — local, private, and scriptable."))
+                egui::RichText::new("Professional, lightweight PDF Editor — local, private, and powerful.")
                     .color(t.text_muted)
                     .font(theme::regular(14.0)),
             );
@@ -92,10 +92,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         ui.horizontal(|ui| {
-                            widgets::artcraft_mark(ui, 28.0);
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new(tl!("Join the ArtCraft community")).font(theme::semibold(15.0)));
-                                ui.label(egui::RichText::new(tl!("Get help, share feedback and follow development on Discord.")).color(t.text_muted));
+                                ui.label(egui::RichText::new("AlePdf").font(theme::semibold(15.0)));
+                                ui.label(egui::RichText::new("Official Website & Project Updates").color(t.text_muted));
                             });
                             // Closed for this run only: the card is back on the next launch.
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -202,7 +201,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 });
                 ui.add_space(8.0);
                 if app.recent.is_empty() {
-                    ui.label(egui::RichText::new(tl!("Files you open in PdfCraft appear here. Drop a PDF anywhere to open it.")).color(t.text_muted));
+                    ui.label(egui::RichText::new("Files you open in AlePdf appear here. Drop a PDF anywhere to open it.").color(t.text_muted));
                 }
             }
             let mut open = None;
@@ -269,7 +268,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             ui.add_space(20.0);
             widgets::section_title(ui, tl!("Privacy"));
             ui.label(
-                egui::RichText::new(tl!("PdfCraft works offline. No telemetry, no account, and no cloud processing unless you add a provider."))
+                egui::RichText::new("AlePdf works offline. No telemetry, no account, and no cloud processing.")
                     .color(t.text_muted),
             );
         });

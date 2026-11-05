@@ -1,16 +1,15 @@
-//! Where PdfCraft and the ArtCraft community live on the web. One table, so the Help menu, the
-//! About dialog, the home screen, the CLI and the README agree.
+//! Where AlePdf lives on the web: website, repository and releases.
 
 use icu_properties::props::Script;
 use std::path::{Path, PathBuf};
 
-/// The app's name in ArtCraft URLs (`getartcraft.com/apps/{APP}`, `github.com/storytold/{APP}`).
-pub const APP: &str = "pdfcraft";
+/// The app's name in URLs (`github.com/themanoftalent/{APP}`).
+pub const APP: &str = "alepdf";
 
-pub const DISCORD: &str = "https://discord.gg/artcraft";
-pub const WEBSITE: &str = "https://getartcraft.com";
-pub const APP_PAGE: &str = "https://getartcraft.com/apps/pdfcraft";
-pub const GITHUB: &str = "https://github.com/storytold/pdfcraft";
+pub const WEBSITE: &str = "https://alepdf-website.vercel.app/";
+pub const APP_PAGE: &str = "https://alepdf-website.vercel.app/";
+pub const GITHUB: &str = "https://github.com/themanoftalent/alepdf";
+pub const DISCORD: &str = "https://alepdf-website.vercel.app/";
 
 /// A link and the registry command that opens it.
 #[derive(Clone, Copy, Debug)]
@@ -22,12 +21,10 @@ pub struct Link {
     pub icon: &'static str,
 }
 
-/// In the order they are shown. Discord comes first: it is where people get help fastest.
+/// In the order they are shown.
 pub const LINKS: &[Link] = &[
-    Link { command: "help.discord", label: "Join the ArtCraft Discord", url: DISCORD, icon: "messages-square" },
-    Link { command: "help.app_page", label: "PdfCraft web page", url: APP_PAGE, icon: "globe" },
-    Link { command: "help.github", label: "PdfCraft on GitHub", url: GITHUB, icon: "code-xml" },
-    Link { command: "help.website", label: "ArtCraft website", url: WEBSITE, icon: "external-link" },
+    Link { command: "help.website", label: "AlePdf Website", url: WEBSITE, icon: "globe" },
+    Link { command: "help.github", label: "AlePdf on GitHub", url: GITHUB, icon: "code-xml" },
 ];
 
 pub fn for_command(id: &str) -> Option<&'static Link> {
