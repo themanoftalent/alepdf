@@ -40,7 +40,7 @@ pub fn encode_g4(data: &[u8], columns: u32, rows: u32) -> Result<Vec<u8>, Filter
             if white { Color::White } else { Color::Black }
         });
         // `VecWriter` writes to memory: its error type has no values.
-        if let Err(never) = encoder.encode_line(pels, width) {
+        if let Err(never) = encoder.encode_line(pels, u32::from(width)) {
             match never {}
         }
     }
@@ -193,11 +193,8 @@ impl Rows {
 }
 
 impl hayro_ccitt::Decoder for Rows {
-    fn push_pixel(&mut self, white: bool) {
-        self.push(white, 1);
-    }
-    fn push_pixel_chunk(&mut self, white: bool, chunks: u32) {
-        self.push(white, (chunks as usize).saturating_mul(8));
+    fn push_pixels(&mut self, white: bool, count: u32) {
+        self.push(white, count as usize);
     }
     fn next_line(&mut self) {
         self.end_row();
@@ -248,11 +245,8 @@ mod tests {
     pub(crate) fn decode(data: &[u8], columns: u32, rows: u32) -> Vec<Vec<bool>> {
         struct Rows(Vec<Vec<bool>>, Vec<bool>, usize);
         impl hayro_ccitt::Decoder for Rows {
-            fn push_pixel(&mut self, white: bool) {
-                self.1.push(white);
-            }
-            fn push_pixel_chunk(&mut self, white: bool, chunks: u32) {
-                self.1.extend(std::iter::repeat_n(white, chunks as usize * 8));
+            fn push_pixels(&mut self, white: bool, count: u32) {
+                self.1.extend(std::iter::repeat_n(white, count as usize));
             }
             fn next_line(&mut self) {
                 let mut row = std::mem::take(&mut self.1);

@@ -1478,11 +1478,8 @@ fn strokes(w: u32, h: u32) -> Vec<u8> {
 fn g4_rows(s: &Stream) -> Vec<Vec<bool>> {
     struct Rows(Vec<Vec<bool>>, Vec<bool>, usize);
     impl hayro_ccitt::Decoder for Rows {
-        fn push_pixel(&mut self, white: bool) {
-            self.1.push(white);
-        }
-        fn push_pixel_chunk(&mut self, white: bool, chunks: u32) {
-            self.1.extend(std::iter::repeat_n(white, chunks as usize * 8));
+        fn push_pixels(&mut self, white: bool, count: u32) {
+            self.1.extend(std::iter::repeat_n(white, count as usize));
         }
         fn next_line(&mut self) {
             let mut row = std::mem::take(&mut self.1);
