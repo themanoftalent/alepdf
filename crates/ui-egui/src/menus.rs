@@ -21,7 +21,7 @@ use crate::{PdfCraftApp, RightPanel};
 pub(super) mod tab_context;
 
 /// The app's name in the menus the layouts write (About, Hide, Quit).
-pub(crate) const APP_NAME: &str = "AlePdf";
+pub(crate) const APP_NAME: &str = "PdfCraft";
 
 /// The top bar's width after the menus: the mode tabs, the search box and the buttons.
 const ROW_AFTER_MENUS: f32 = 720.0;
@@ -116,7 +116,6 @@ const FILE: &[&str] = &[
     SEP,
     "file.save",
     "file.save_as",
-    "file.save_google_drive",
     "file.revert",
     SEP,
     "file.close",
@@ -191,9 +190,11 @@ const PAGES: &[&str] = &[
     "page.crop",
     "page.boxes",
     "page.number",
+    "page.properties",
     SEP,
     "bookmark.add",
     "bookmark.from_structure",
+    "bookmark.from_text_styles",
 ];
 /// Sign ▸ Fill & Sign, with the short labels of the Fill & Sign toolbar.
 const FILL: &[(&str, &str)] = &[
@@ -223,7 +224,7 @@ const SIGN: &[&str] = &[
 ];
 const WINDOW: &[&str] = &["view.next_tab", "view.previous_tab"];
 const HELP: &[&str] =
-    &["help.shortcuts", SEP, "help.app_page", "help.github", "help.website", SEP, "help.check_updates", SEP, "help.about"];
+    &["help.shortcuts", SEP, "help.app_page", "help.github", "help.website", "help.discord", SEP, "help.check_updates", SEP, "help.about"];
 
 /// A registry shortcut as a craft-keymap chord: `command` is ⌘ (Ctrl elsewhere) and `mac_ctrl`
 /// the Control key on macOS. `None` for a key craft-keymap doesn't name.
@@ -255,6 +256,14 @@ fn english(labeled: Labeled<'_>) -> Option<String> {
 }
 
 fn translate(english: &'static str) -> String {
+    // craft_menu's bar writes "⋯" (U+22EF, MIDLINE HORIZONTAL ELLIPSIS) itself, for the menu of
+    // titles that don't fit: a sentinel to translate, not an English phrase, and the only one of
+    // its four reserved labels no font this app ships or falls back to has a glyph for.
+    // MissingGlyphPolicy::Panic (egui 0.37) crashes on it. The ordinary ellipsis every other
+    // truncated label in this app already uses is in the bundled faces.
+    if english == "\u{22ef}" {
+        return "…".to_owned();
+    }
     tl!(english).to_owned()
 }
 
@@ -655,6 +664,22 @@ mod tests {
 
     fn item<'b>(bar: &'b MenuBar, command: &CommandRef) -> &'b Item {
         bar.find(command).unwrap_or_else(|| panic!("{} is in the menus", command.key()))
+    }
+
+    /// The bar's own overflow-menu sentinel is not rendered as typed: no font this app ships or
+    /// falls back to has U+22EF, and egui 0.37's `MissingGlyphPolicy::Panic` crashes on it when
+    /// the menu bar is narrow enough to need it. The editing tests that narrow the window while a
+    /// paragraph is open reproduce this end to end. The other three reserved labels are plain
+    /// ASCII, so untranslated is safe for them.
+    #[test]
+    fn the_overflow_menu_sentinel_is_not_passed_through_untranslated() {
+        crate::i18n::set_current(crate::i18n::Lang::EN);
+        let translated = translate("⋯");
+        assert_ne!(translated, "⋯", "no installed font has this glyph");
+        assert_eq!(translated, "…", "the ordinary ellipsis the rest of the app already uses");
+        for label in ["Menu", "Scroll menu up", "Scroll menu down"] {
+            assert_eq!(translate(label), label, "plain ASCII reserved labels need no substitution");
+        }
     }
 
     #[test]

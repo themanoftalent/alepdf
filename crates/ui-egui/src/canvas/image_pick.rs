@@ -46,8 +46,16 @@ pub(crate) fn page_input(
     let u = info_page.view_to_user(vx, vy);
     let at = [f64::from(u[0]), f64::from(u[1])];
     let generation = doc.edit_generation();
-    view.picked_image =
-        doc.page_image_at(page, at).and_then(|index| doc.page_images(page).get(index).map(|i| PickedImage { page, index, rect: i.rect, generation }));
+    view.picked_image = doc.page_image_at(page, at).and_then(|index| {
+        doc.page_images(page).get(index).and_then(|i| {
+            let screen_rect = crate::canvas::image_screen_rect(i, xf, info, page);
+            if screen_rect.is_positive() && screen_rect.contains(p) {
+                Some(PickedImage { page, index, rect: crate::canvas::image_selectable_bounds(i), generation })
+            } else {
+                None
+            }
+        })
+    });
 }
 
 /// Forget the selected picture once the document has been edited since it was picked: Edit text &
@@ -71,10 +79,10 @@ pub(crate) fn paint(painter: &egui::Painter, xf: &PageXform, page: usize, info: 
 }
 
 /// A file name without characters file systems refuse.
-fn safe_name(s: &str) -> String {
+pub(crate) fn safe_name(s: &str) -> String {
     let cleaned: String = s.chars().map(|c| if c.is_control() || r#"/\:*?"<>|"#.contains(c) { '_' } else { c }).take(80).collect();
     let cleaned = cleaned.trim().trim_matches('.').to_string();
-    if cleaned.is_empty() { "AlePdf".into() } else { cleaned }
+    if cleaned.is_empty() { "PdfCraft".into() } else { cleaned }
 }
 
 /// The per-user folder that holds the file of the last Copy Image in Original Format: `Clipboard`
@@ -91,11 +99,11 @@ fn clipboard_dir() -> Option<std::path::PathBuf> {
     }
     let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from).filter(|p| p.is_absolute());
     if cfg!(target_os = "macos") {
-        env("HOME").map(|h| h.join("Library/Caches/AlePdf/Clipboard"))
+        env("HOME").map(|h| h.join("Library/Caches/PdfCraft/Clipboard"))
     } else if cfg!(windows) {
-        env("LOCALAPPDATA").map(|d| d.join("AlePdf").join("Clipboard"))
+        env("LOCALAPPDATA").map(|d| d.join("PdfCraft").join("Clipboard"))
     } else {
-        env("XDG_CACHE_HOME").or_else(|| env("HOME").map(|h| h.join(".cache"))).map(|d| d.join("alepdf/clipboard"))
+        env("XDG_CACHE_HOME").or_else(|| env("HOME").map(|h| h.join(".cache"))).map(|d| d.join("pdfcraft/clipboard"))
     }
 }
 
@@ -171,7 +179,8 @@ impl PdfCraftApp {
             return;
         }
         // The document may have changed since the click: the same picture must still be there.
-        let current = self.session.get(self.views[i].id).and_then(|d| d.page_images(picked.page).get(picked.index).map(|im| im.rect));
+        let current =
+            self.session.get(self.views[i].id).and_then(|d| d.page_images(picked.page).get(picked.index).map(crate::canvas::image_selectable_bounds));
         if current == Some(picked.rect) {
             self.copy_page_image_file(picked.page, picked.index);
         } else {
@@ -195,6 +204,7 @@ impl PdfCraftApp {
         let copied = file.and_then(|(ext, bytes)| {
             let name = format!("{stem} p{} img{}.{ext}", page.saturating_add(1), index.saturating_add(1));
             self.put_file_on_clipboard(&name, &bytes)?;
+            self.last_copied_image = None;
             self.last_copied_file = Some((name, bytes));
             Ok(ext)
         });
@@ -213,7 +223,7 @@ impl PdfCraftApp {
         }
         let dir = clipboard_dir().ok_or("there is no folder for the copied file")?;
         let path = write_clipboard_file(&dir, name, bytes)?;
-        arboard::Clipboard::new().and_then(|mut c| c.set().file_list(&[path])).map_err(|e| e.to_string())
+        crate::os_clipboard::with(|c| c.set().file_list(&[path])).map_err(|e| e.to_string())
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -234,7 +244,7 @@ mod tests {
     #[test]
     fn file_names_are_safe() {
         assert_eq!(safe_name("a/b:c"), "a_b_c");
-        assert_eq!(safe_name("  ..  "), "AlePdf");
+        assert_eq!(safe_name("  ..  "), "PdfCraft");
         assert_eq!(safe_name("Relazione 2026"), "Relazione 2026");
     }
 

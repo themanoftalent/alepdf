@@ -70,7 +70,7 @@ pub fn line(text: &mut dyn egui::TextBuffer) -> egui::TextEdit<'_> {
     egui::TextEdit::singleline(text).margin(FIELD_MARGIN).min_size(vec2(0.0, FIELD_MIN_HEIGHT))
 }
 
-/// A multiline field with the same horizontal inset as [`line`].
+/// A multiline field with the same horizontal inset as [`line()`].
 pub fn block(text: &mut dyn egui::TextBuffer) -> egui::TextEdit<'_> {
     egui::TextEdit::multiline(text).margin(egui::Margin::symmetric(10, 6))
 }
@@ -254,6 +254,23 @@ pub fn radio_value<'a, V: PartialEq>(ui: &mut egui::Ui, current: &mut V, alterna
     response
 }
 
+/// Keeps the end of a "from … to …" page range at or after its start, but not while `typing` into the
+/// end's `DragValue` ([`typing_into`]): the half-typed "1" of "12" is below `from`, and raising it
+/// then replaced what the user was typing with `from` (#5574). A dialog's OK orders it whatever has
+/// the keyboard (`typing` false), so a range left reversed never reaches the edit.
+pub fn keep_range_ordered(from: usize, to: &mut usize, typing: bool) {
+    if !typing {
+        *to = (*to).max(from);
+    }
+}
+
+/// Whether `field` is being typed into: it has the keyboard focus in egui's memory. Unlike
+/// `Response::has_focus` this stays true while the window is in the background, so switching to
+/// another app mid-number doesn't end the typing.
+pub fn typing_into(field: &Response) -> bool {
+    field.ctx.memory(|m| m.has_focus(field.id))
+}
+
 /// The box of a checkbox or the circle of a radio button. egui draws it with the widgets' visuals
 /// and has no style of its own for it, so it is set in a scope around the widget, keeping what
 /// the caller set (dialogs and the search panel already outline theirs):
@@ -433,14 +450,28 @@ fn wrapped_lines(ui: &egui::Ui, text: &str, font: &egui::FontId, width: f32, tru
 
 /// Transient message at the bottom centre.
 pub fn toast(app: &mut PdfCraftApp, ctx: &egui::Context) {
+    // A form script message waiting its turn takes the toast once it is free.
+    if app.toast.is_none() {
+        app.toast_script = None;
+        // A left-out count whose toast was cleared before its time is said again.
+        app.script_messages_dropped = app.script_messages_dropped.saturating_add(std::mem::take(&mut app.toast_dropped));
+        app.next_script_message();
+    }
     let Some((msg, start)) = app.toast.clone() else { return };
     let now = ctx.input(|i| i.time);
     let start = if start == 0.0 { now } else { start };
     app.toast = Some((msg.clone(), start));
     if now - start > 3.5 {
         app.toast = None;
+        app.toast_script = None;
+        // Shown its time: a left-out count it said is done.
+        app.toast_dropped = 0;
+        if app.next_script_message() {
+            ctx.request_repaint();
+        }
         return;
     }
+    let script = app.toast_script.as_ref().map(|m| (m.title.clone(), crate::js_ui::message_icon(m.icon)));
     let t = Tokens::get(ctx);
     let screen = ctx.content_rect();
     // Above the progress notice while a job runs.
@@ -461,10 +492,26 @@ pub fn toast(app: &mut PdfCraftApp, ctx: &egui::Context) {
                     // Allow natural short labels; wrap longer ones within the viewport,
                     // including the frame's 32 points and 16-point outside margins.
                     ui.set_max_width((screen.width() - 64.0).clamp(1.0, 560.0));
-                    ui.add(
-                        egui::Label::new(egui::RichText::new(msg).color(if t.dark() { Color32::from_rgb(0x22, 0x22, 0x26) } else { Color32::WHITE }))
-                            .wrap(),
-                    );
+                    let ink = if t.dark() { Color32::from_rgb(0x22, 0x22, 0x26) } else { Color32::WHITE };
+                    let text = |ui: &mut egui::Ui| {
+                        ui.add(egui::Label::new(egui::RichText::new(msg).color(ink)).wrap());
+                    };
+                    match script {
+                        // A form script's message: its icon, then its title (when it gave one)
+                        // over its text.
+                        Some((title, icon)) => {
+                            ui.horizontal_top(|ui| {
+                                ui.add(icons::image(icon, 16.0, ink));
+                                ui.vertical(|ui| {
+                                    if let Some(title) = title {
+                                        ui.add(egui::Label::new(egui::RichText::new(title).strong().color(ink)).wrap());
+                                    }
+                                    text(ui);
+                                });
+                            });
+                        }
+                        None => text(ui),
+                    }
                 });
         });
     ctx.request_repaint_after(std::time::Duration::from_millis(100));
@@ -556,7 +603,6 @@ pub fn progress_notice(app: &PdfCraftApp, ctx: &egui::Context) -> bool {
 }
 
 /// The ArtCraft wordmark (Storyteller's brand, docs/brand/; not open source), sized to `height`.
-#[allow(dead_code)]
 pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
     let dark = ui.visuals().dark_mode;
     let (uri, bytes): (&str, &'static [u8]) = if dark {
@@ -567,7 +613,7 @@ pub fn artcraft_logo(ui: &mut egui::Ui, height: f32) -> Response {
     ui.add(egui::Image::from_bytes(uri, bytes).max_height(height).alt_text("ArtCraft"))
 }
 
-#[allow(dead_code)]
+/// The ArtCraft mark (brand blue, works on light and dark), `size` points square.
 pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
     ui.add(
         egui::Image::from_bytes("bytes://artcraft-mark.svg", include_bytes!("../../../docs/brand/artcraft-mark.svg"))
@@ -576,53 +622,14 @@ pub fn artcraft_mark(ui: &mut egui::Ui, size: f32) -> Response {
     )
 }
 
-/// The AlePdf app logo, `size` points square.
-pub fn alepdf_logo(ui: &mut egui::Ui, size: f32) -> Response {
-    let texture = ui.ctx().load_texture(
-        "alepdf-logo-texture",
-        alepdf_logo_color_image().clone(),
-        egui::TextureOptions::LINEAR,
-    );
-    ui.add(
-        egui::Image::new(&texture)
-            .fit_to_exact_size(vec2(size, size))
-            .corner_radius(CornerRadius::same((size * 0.22) as u8)),
-    )
-}
-
-fn alepdf_logo_color_image() -> &'static egui::ColorImage {
-    static IMAGE: std::sync::OnceLock<egui::ColorImage> = std::sync::OnceLock::new();
-    IMAGE.get_or_init(|| {
-        let bytes = include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png");
-        match image::load_from_memory(bytes) {
-            Ok(img) => {
-                let rgba = img.to_rgba8();
-                let dims = [rgba.width() as usize, rgba.height() as usize];
-                egui::ColorImage::from_rgba_unmultiplied(dims, rgba.as_raw())
-            }
-            Err(e) => {
-                log::warn!("could not decode AlePdf logo: {e}");
-                egui::ColorImage::example()
-            }
-        }
-    })
-}
-
-#[allow(dead_code)]
-#[inline]
-pub fn alecraft_logo(ui: &mut egui::Ui, size: f32) -> Response {
-    alepdf_logo(ui, size)
-}
-
 /// Buttons for every community link (`pdfcraft_engine::links`), Discord first and prominent.
 /// Returns the registry command of the one clicked.
-#[allow(dead_code)]
 pub fn community_links(ui: &mut egui::Ui) -> Option<&'static str> {
     let mut clicked = None;
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
         for (i, l) in pdfcraft_engine::links::LINKS.iter().enumerate() {
-            let resp = icon_pill(ui, l.icon, tl!(l.label), i == 0);
+            let resp = if i == 0 { icon_pill(ui, l.icon, tl!("Join our Discord"), true) } else { icon_pill(ui, l.icon, tl!(l.label), false) };
             if resp.on_hover_text(l.url).clicked() {
                 clicked = Some(l.command);
             }
@@ -691,6 +698,9 @@ mod tests {
 
     #[test]
     fn search_placeholder_never_overlaps_the_shortcut() {
+        if !crate::i18n::needs_catalogs() {
+            return;
+        }
         let previous = crate::i18n::current();
         for (code, expected) in [("en", "Ctrl+K"), ("de", "Strg+K")] {
             crate::i18n::set_current(crate::i18n::Lang::from_code(code).unwrap());

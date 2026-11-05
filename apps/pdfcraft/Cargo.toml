@@ -1,14 +1,9 @@
 [package]
 name = "pdfcraft"
-default-run = "alepdf"
-description = "AlePdf desktop app"
+description = "PdfCraft desktop app"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-
-[[bin]]
-name = "alepdf"
-path = "src/main.rs"
 
 [lints]
 workspace = true

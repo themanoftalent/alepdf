@@ -93,13 +93,17 @@ impl DocView {
         Some(s.text(t)).filter(|x| !x.is_empty())
     }
 
-    /// Select all: every page in Organize, or every word on the current page.
+    /// Select every page without navigating; shared by Organize and the Pages sidebar.
+    pub fn select_all_pages(&mut self) -> bool {
+        self.selected = (0..self.page_count).collect();
+        self.select_anchor = (self.page_count > 0).then_some(self.current);
+        !self.selected.is_empty()
+    }
+
+    /// Select all words on the current page, or every page in Organize.
     pub fn select_all(&mut self) -> bool {
         if self.organize {
-            self.selected = (0..self.page_count).collect();
-            // Keep the current page as the anchor for the next Shift-click.
-            self.select_anchor = (self.page_count > 0).then_some(self.current);
-            return !self.selected.is_empty();
+            return self.select_all_pages();
         }
         // Scrolling continuously, Select All takes the whole document's text (#2639); one page at
         // a time, the page shown.
@@ -148,6 +152,7 @@ impl DocView {
 enum SelectionAction {
     Note,
     Markup(comments::CommentTool),
+    ClearMarkup,
     Replace,
     Copy,
 }
@@ -194,6 +199,7 @@ pub(super) fn selection_actions(
                     for (label, action) in [
                         (tl!("Add comment"), SelectionAction::Note),
                         (tl!("Highlight"), SelectionAction::Markup(comments::CommentTool::Highlight)),
+                        (tl!("Clear highlight"), SelectionAction::ClearMarkup),
                         (tl!("Underline"), SelectionAction::Markup(comments::CommentTool::Underline)),
                         (tl!("Strikethrough"), SelectionAction::Markup(comments::CommentTool::StrikeOut)),
                         (tl!("Replace text"), SelectionAction::Replace),
@@ -231,6 +237,28 @@ pub(super) fn selection_actions(
                 text: String::new(),
                 focus: true,
             });
+        }
+        SelectionAction::ClearMarkup => {
+            let doomed: Vec<usize> = info
+                .annotations
+                .iter()
+                .filter(|a| a.page == page && matches!(a.subtype.as_str(), "Highlight" | "Underline" | "StrikeOut" | "Squiggly") && !a.locked)
+                .filter(|a| {
+                    quads.iter().any(|sq| {
+                        let s_min_x = (sq[0].min(sq[2]).min(sq[4]).min(sq[6])) as f32;
+                        let s_max_x = (sq[0].max(sq[2]).max(sq[4]).max(sq[6])) as f32;
+                        let s_min_y = (sq[1].min(sq[3]).min(sq[5]).min(sq[7])) as f32;
+                        let s_max_y = (sq[1].max(sq[3]).max(sq[5]).max(sq[7])) as f32;
+                        let r = a.rect;
+                        r[0] <= s_max_x && r[2] >= s_min_x && r[1] <= s_max_y && r[3] >= s_min_y
+                    })
+                })
+                .map(|a| a.index)
+                .collect();
+            if !doomed.is_empty() {
+                let edits = doomed.into_iter().map(|index| Edit::DeleteAnnotation { page, index }).collect();
+                view.pending_edit = Some(Edit::Batch { label: "Clear highlight".into(), edits });
+            }
         }
         SelectionAction::Markup(tool) => {
             // Every markup button carries a markup tool; anything else adds nothing.

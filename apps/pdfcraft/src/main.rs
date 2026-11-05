@@ -1,6 +1,8 @@
 //! PdfCraft desktop app.
 //!
 //! Usage: `pdfcraft [options] [files…]` (`-h` / `--help` prints a short version of this, [`USAGE`]).
+//! `--two-paged` opens each command-line PDF in noncontinuous two-page view, without changing defaults.
+//! An explicit `--layout` takes precedence for the active document, regardless of argument order.
 //! `--create-images [images…]` stages the images in one PDF and asks for the page DPI.
 //!
 //! View options (applied after the files open; also the seed of the UI control channel):
@@ -8,7 +10,7 @@
 //!  --theme light|dark|system  --language auto|<code>  --mode all|read|edit|convert|sign  --tool <catalogue id>  --left open|closed
 //!  --organize on  --fields on  --dialog properties|shortcuts|about  --palette <query>  --home on
 //!  --cover on|off  --default-layout single|continuous|two-up|two-page  --default-continuous on|off  --default-zoom fit-width|fit-page|<percent>  --always-default-view on|off
-//!  --page-gaps on|off  --default-page-gaps on|off
+//!  --page-gaps on|off  --default-page-gaps on|off  --recent-files 0..50
 //!  --combine-view grid|list  --combine-zoom 60..200`
 //!
 //! `--new-window` opens a window of its own. Without it, on Windows, a launch that only names files
@@ -40,6 +42,7 @@ mod motion;
 mod reopen;
 mod settings;
 mod single_instance;
+mod startup;
 mod text_scale;
 #[cfg(test)]
 #[path = "windows_manifest.rs"]
@@ -58,12 +61,13 @@ const APP_ICON_PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256
 /// What `-h` / `--help` prints (#4076): a hint, not the full option list (that is this file's
 /// doc comment and the README). Scripts want `pdfcraft-cli`, which never opens a window.
 const USAGE: &str = "\
-Usage: alepdf [options] [files…]
+Usage: pdfcraft [options] [files…]
 
-Opens the files in the AlePdf desktop app.
+Opens the files in the PdfCraft desktop app.
 
 Options:
-  --new-window                open a window of its own instead of passing the files to a running AlePdf
+  --two-paged                 open command-line PDFs in noncontinuous two-page view
+  --new-window                open a window of its own instead of passing the files to a running PdfCraft
   --create-images [images…]   put the images in one PDF and ask for the page DPI
   --control <file>            enable the UI control channel (pdfcraft-cli ui --control <file> …)
   --page N, --zoom 150, --layout continuous, --theme dark, …
@@ -88,7 +92,7 @@ const LEGACY_STORAGE_KEY: &str = "printcraft";
 /// it is `PdfCraftData` beside the executable (#157). XDG desktops use the configuration base;
 /// other platforms retain eframe's PdfCraft folder. Logs and recovery stay in the data folder.
 fn settings_dir() -> Option<std::path::PathBuf> {
-    let legacy = eframe::storage_dir("AlePdf").or_else(|| eframe::storage_dir("AleCraft")).or_else(|| eframe::storage_dir("PdfCraft"));
+    let legacy = eframe::storage_dir("PdfCraft");
     match settings::directory(
         cfg!(all(unix, not(target_os = "macos"))),
         pdfcraft_ui_egui::portable::data_dir(),
@@ -104,25 +108,19 @@ fn settings_dir() -> Option<std::path::PathBuf> {
     }
 }
 
-/// Move the settings and crash-recovery folders of the app's former names (PrintCraft, PdfCraft, AleCraft)
-/// to AlePdf once, so an upgrade keeps recent files, preferences and unsaved work. Best effort: a
+/// Move the settings and crash-recovery folders of the app's former name, PrintCraft, to the new
+/// name once, so an upgrade keeps recent files, preferences and unsaved work. Best effort: a
 /// folder is left alone when the new one already exists or the move fails. A portable copy leaves
 /// the per-user folders alone.
 fn migrate_legacy_folders() {
     if pdfcraft_ui_egui::portable::data_dir().is_some() {
         return;
     }
-    let mut moves = vec![
-        (eframe::storage_dir("PrintCraft"), eframe::storage_dir("AlePdf")),
-        (eframe::storage_dir("PdfCraft"), eframe::storage_dir("AlePdf")),
-        (eframe::storage_dir("AleCraft"), eframe::storage_dir("AlePdf")),
-    ];
+    let mut moves = vec![(eframe::storage_dir("PrintCraft"), eframe::storage_dir("PdfCraft"))];
     // Recovery lives in the settings folder except on Windows, where it is under %LOCALAPPDATA%.
     if cfg!(windows) {
         let local = std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()).map(std::path::PathBuf::from);
-        moves.push((local.as_ref().map(|d| d.join("PrintCraft")), local.as_ref().map(|d| d.join("AlePdf"))));
-        moves.push((local.as_ref().map(|d| d.join("PdfCraft")), local.as_ref().map(|d| d.join("AlePdf"))));
-        moves.push((local.as_ref().map(|d| d.join("AleCraft")), local.map(|d| d.join("AlePdf"))));
+        moves.push((local.as_ref().map(|d| d.join("PrintCraft")), local.map(|d| d.join("PdfCraft"))));
     }
     for (old, new) in moves {
         let (Some(old), Some(new)) = (old, new) else { continue };
@@ -202,7 +200,7 @@ fn rejoin_split_paths(args: Vec<String>, exists: impl Fn(&str) -> bool) -> Vec<S
 fn main() -> eframe::Result {
     // Windows: the update helper is a copy of this program started with `--finish-update`.
     #[cfg(windows)]
-    if let Some(result) = craft_update::self_update::finish(&pdfcraft_ui_egui::updates::ALEPDF_APP, &std::env::args_os().skip(1).collect::<Vec<_>>()) {
+    if let Some(result) = craft_update::self_update::finish(&pdfcraft_ui_egui::UPDATE_APP, &std::env::args_os().skip(1).collect::<Vec<_>>()) {
         std::process::exit(i32::from(result.is_err()));
     }
     // First, so the panic hook and every start-up warning are recorded (`logging`).
@@ -224,28 +222,16 @@ fn main() -> eframe::Result {
             let _ = std::io::Write::write_fmt(&mut std::io::stderr(), format_args!("pdfcraft: {report}\n"));
         }
     }));
-    let mut files = Vec::new();
-    let mut options: Vec<(String, String)> = Vec::new();
-    let mut control_file: Option<String> = None;
-    let mut create_images = false;
-    let mut new_window = false;
-    let mut args = std::env::args().skip(1);
-    while let Some(a) = args.next() {
-        match a.as_str() {
-            "--version" => return print_and_exit(&format!("alepdf {}", pdfcraft_engine::build_info::version())),
-            // Before any window or log file, so a scripted call returns (#4076).
-            "-h" | "--help" => return print_and_exit(USAGE),
-            "--control" => control_file = args.next(),
-            "--create-images" => create_images = true,
-            "--new-window" => new_window = true,
-            flag if flag.starts_with("--") => {
-                let value = args.next().unwrap_or_default();
-                options.push((flag.trim_start_matches("--").to_string(), value));
-            }
-            _ => files.push(path_from_arg(a)),
-        }
+    let mut startup = startup::Arguments::parse(std::env::args().skip(1));
+    if startup.version {
+        return print_and_exit(&format!("pdfcraft {}", pdfcraft_engine::build_info::version()));
     }
-    let files = rejoin_split_paths(files, |p| std::path::Path::new(p).is_file());
+    if startup.help {
+        return print_and_exit(USAGE);
+    }
+    startup.files = rejoin_split_paths(startup.files, |p| std::path::Path::new(p).is_file());
+    let may_hand_off = startup.may_hand_off();
+    let startup::Arguments { files, options, control_file, create_images, two_paged, .. } = startup;
     let integrated = cfg!(target_os = "macos");
     // GNOME on Wayland leaves the window frame to the app (src/decorations.rs).
     let window_controls = if cfg!(any(target_os = "macos", target_os = "windows")) { None } else { decorations::app_drawn() };
@@ -254,19 +240,18 @@ fn main() -> eframe::Result {
     // no file behind) and after the PrintCraft migration (which a fresh folder would block).
     // Records logged until now are written to it first.
     if let (Some(logger), Some(dir)) =
-        (logger, pdfcraft_ui_egui::portable::data_dir().map(std::path::Path::to_path_buf).or_else(|| eframe::storage_dir("AlePdf")))
+        (logger, pdfcraft_ui_egui::portable::data_dir().map(std::path::Path::to_path_buf).or_else(|| eframe::storage_dir("PdfCraft")))
     {
         match logger.attach_dir(&dir.join("logs")) {
-            Ok(path) => log::info!("AlePdf {}, log file {}", pdfcraft_engine::build_info::version(), path.display()),
+            Ok(path) => log::info!("PdfCraft {}, log file {}", pdfcraft_engine::build_info::version(), path.display()),
             // Standard error only by now (`attach_dir` gave up on the file); unlike `eprintln!`, never panics.
             Err(e) => log::warn!("no log file: {e}"),
         }
     }
     // Windows, Linux and the BSDs: a launch that only names files (an Outlook attachment, an
-    // Explorer double-click, a file manager or `xdg-open`) hands them to the AlePdf already
+    // Explorer double-click, a file manager or `xdg-open`) hands them to the PdfCraft already
     // running and exits (#282, #317, #1726). Any option means the caller wants this launch's own
     // window.
-    let may_hand_off = !new_window && !files.is_empty() && options.is_empty() && control_file.is_none() && !create_images;
     // Absolute for this instance too: links relative to a document resolve against its folder,
     // never the working directory.
     let files = single_instance::absolute(&files);
@@ -276,7 +261,7 @@ fn main() -> eframe::Result {
         single_instance::Claim::Alone => None,
     };
     let choice = renderer_choice(std::env::var("PDFCRAFT_RENDERER").ok().as_deref());
-    let launch = Launch { files, options, control_file, create_images, integrated, window_controls };
+    let launch = Launch { files, options, control_file, create_images, integrated, window_controls, two_paged };
     // Finder, Open With and the Dock deliver files as Apple events, not arguments; catch the one
     // that launched us as well as later ones. Lives until the event loop returns.
     #[cfg(target_os = "macos")]
@@ -285,7 +270,7 @@ fn main() -> eframe::Result {
     let started = Rc::new(Cell::new(false));
     let first = if choice == RendererChoice::Gl { eframe::Renderer::Glow } else { eframe::Renderer::Wgpu };
     let result = eframe::run_native(
-        "AlePdf",
+        "PdfCraft",
         native_options(launch.integrated, launch.window_controls.is_some(), first),
         app_creator(
             launch.clone(),
@@ -303,7 +288,7 @@ fn main() -> eframe::Result {
             // usually still works there, so that's better than quitting.
             log::error!("the GPU renderer (wgpu) didn't start: {e}. Starting with OpenGL instead; set PDFCRAFT_RENDERER=gl to skip wgpu.");
             eframe::run_native(
-                "AlePdf",
+                "PdfCraft",
                 native_options(launch.integrated, launch.window_controls.is_some(), eframe::Renderer::Glow),
                 app_creator(
                     launch,
@@ -346,7 +331,7 @@ fn retry_with_gl(choice: RendererChoice, app_started: bool) -> bool {
 /// The window and renderer settings for one run.
 fn native_options(integrated: bool, app_frame: bool, renderer: eframe::Renderer) -> eframe::NativeOptions {
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("AlePdf")
+        .with_title("PdfCraft")
         .with_inner_size([1440.0, 920.0])
         .with_min_inner_size([820.0, 520.0])
         .with_drag_and_drop(true)
@@ -386,6 +371,7 @@ struct Launch {
     integrated: bool,
     /// The window buttons the app draws, when the desktop leaves the frame to it.
     window_controls: Option<pdfcraft_ui_egui::window_controls::Layout>,
+    two_paged: bool,
 }
 
 /// Whether the window is a native Wayland one (not X11 or XWayland).
@@ -406,7 +392,7 @@ fn app_creator<'a>(
     instance: Option<&'a single_instance::Server>,
     #[cfg(target_os = "macos")] apple_events: &'a apple_events::AppleEvents,
 ) -> eframe::AppCreator<'a> {
-    let Launch { files, options, control_file, create_images, integrated, window_controls } = launch;
+    let Launch { files, options, control_file, create_images, integrated, window_controls, two_paged } = launch;
     Box::new(move |cc| {
         started.set(true);
         let mut app = PdfCraftApp::new();
@@ -416,7 +402,7 @@ fn app_creator<'a>(
         app.enable_desktop_theme();
         // The system's reopen-windows choice (macOS) starts the preference; a saved choice replaces it.
         app.reopen_last_session = reopen::system_default();
-        if let Some(json) = cc.storage.and_then(|s| s.get_string("alepdf").or_else(|| s.get_string("pdfcraft")).or_else(|| s.get_string(LEGACY_STORAGE_KEY))) {
+        if let Some(json) = cc.storage.and_then(|s| s.get_string("pdfcraft").or_else(|| s.get_string(LEGACY_STORAGE_KEY))) {
             app.restore(&json);
         }
         app.window_state = pdfcraft_ui_egui::window_state::WindowState::started_with(cc.storage);
@@ -429,8 +415,7 @@ fn app_creator<'a>(
         {
             app.motion.source = Some(motion::source());
         }
-        // Do not check for upstream updates on startup.
-        app.set_startup_update_check(false);
+        app.set_startup_update_check(true);
         app.printer_source = Some(pdfcraft_ui_egui::system_printers());
         app.os_key_store_ids = cfg!(any(target_os = "macos", target_os = "windows"));
         #[cfg(target_os = "macos")]
@@ -474,6 +459,7 @@ fn app_creator<'a>(
                 &[("folder", &w.folder.display().to_string()), ("error", &w.error)],
             );
         }
+        let defer_layout = two_paged && !files.is_empty() && !create_images;
         if create_images {
             if let Err(e) = app.begin_image_import_paths(&files) {
                 app.notify(e);
@@ -482,12 +468,11 @@ fn app_creator<'a>(
             // With the preference on, last session's files come back first; files named on
             // the command line open after them, in front (#442).
             app.reopen_last_files(&files);
-            for f in files {
-                app.open_path(&f);
-            }
+            startup::open_files(&mut app, &files, two_paged);
         }
         for (k, v) in options {
-            if let Err(e) = app.set_option(&k, &v) {
+            let result = if defer_layout && k == "layout" { app.set_launch_layout(&v) } else { app.set_option(&k, &v) };
+            if let Err(e) = result {
                 log::warn!("--{k} {v}: {e}");
             }
         }

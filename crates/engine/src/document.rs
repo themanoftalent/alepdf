@@ -59,9 +59,52 @@ pub struct Document {
     /// XFA forms: what was approximated, rewritten or could not be written to the XFA data
     /// (also in `info.warnings`, kept there when the document is re-read).
     pub xfa_warnings: Vec<String>,
-    /// What the last successful [`Session::apply`](crate::Session::apply) wrote that its fonts can't draw: kept as typed,
-    /// drawn with `?` in its place (see [`TextNotice`]). The interface shows it; tools return it.
-    pub edit_notices: Vec<TextNotice>,
+    /// What the last successful [`Session::apply`](crate::Session::apply) wants said (see
+    /// [`EditNotice`]): text its fonts can't draw, pages whose own backdrop stays off. The
+    /// interface shows it; tools return it.
+    pub edit_notices: Vec<EditNotice>,
+}
+
+/// Something the last successful edit did that the user should hear about, never left silent
+/// (AGENTS.md §4).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum EditNotice {
+    /// Text stored as typed but drawn with `?`.
+    Undrawn(TextNotice),
+    /// Remove background couldn't turn back on the white backdrop these pages (0-based,
+    /// ascending) paint themselves: their content changed after the background replaced it, so
+    /// turning it on could paint over something (`pdfcraft_edit::backdrops_left_off`). They look
+    /// the same on white paper.
+    BackdropsLeftOff { pages: Vec<usize> },
+}
+
+impl std::fmt::Display for EditNotice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EditNotice::Undrawn(n) => n.fmt(f),
+            EditNotice::BackdropsLeftOff { pages } => {
+                let (which, own) = if pages.len() == 1 { ("page", "its") } else { ("pages", "their") };
+                write!(
+                    f,
+                    "{which} {} changed after the background was added, so {own} own white backdrop was not turned back on (it looks the same on white paper)",
+                    page_runs(pages)
+                )
+            }
+        }
+    }
+}
+
+/// 0-based pages as 1-based runs: `[0, 1, 2, 5]` is "1-3, 6".
+pub(crate) fn page_runs(pages: &[usize]) -> String {
+    let mut runs: Vec<(usize, usize)> = Vec::new();
+    for &p in pages {
+        match runs.last_mut() {
+            Some((_, end)) if end.checked_add(1) == Some(p) => *end = p,
+            _ => runs.push((p, p)),
+        }
+    }
+    let one = |p: usize| p.saturating_add(1);
+    runs.iter().map(|&(a, b)| if a == b { one(a).to_string() } else { format!("{}-{}", one(a), one(b)) }).collect::<Vec<_>>().join(", ")
 }
 
 /// Text an edit stored as typed but drew with `?` in place of `ch`, because the font it is drawn
@@ -86,7 +129,7 @@ impl std::fmt::Display for TextNotice {
         match (&self.field, self.redrawn_elsewhere) {
             (Some(name), true) => write!(
                 f,
-                "form field {name:?} (page {page}) holds {ch}, which its font can't draw: the value is saved, AlePdf shows ? in its place, and other PDF viewers redraw the field from the value"
+                "form field {name:?} (page {page}) holds {ch}, which its font can't draw: the value is saved, PdfCraft shows ? in its place, and other PDF viewers redraw the field from the value"
             ),
             (Some(name), false) => write!(
                 f,
@@ -156,6 +199,20 @@ impl Document {
         self.editor.as_ref().map(|e| optimize::audit_space(&e.cos, self.bytes.len() as u64)).unwrap_or_default()
     }
 
+    /// The backdrop `page` (0-based) paints itself, which hides a background (Add Background).
+    pub fn page_backdrop(&self, page: usize) -> Option<pdfcraft_edit::Backdrop> {
+        self.editor.as_ref().and_then(|e| pdfcraft_edit::page_backdrop(&e.cos, page).ok().flatten())
+    }
+
+    /// [`Self::page_backdrop`] for each of `pages`, in order, walking the page tree once: the
+    /// way to check many pages. A page out of range has none.
+    pub fn page_backdrops(&self, pages: &[usize]) -> Vec<Option<pdfcraft_edit::Backdrop>> {
+        match &self.editor {
+            Some(e) => pdfcraft_edit::page_backdrops(&e.cos, pages),
+            None => vec![None; pages.len()],
+        }
+    }
+
     /// Edit a PDF: the images `page` draws (0-based).
     pub fn page_images(&self, page: usize) -> Vec<pdfcraft_edit::PageImage> {
         self.editor.as_ref().and_then(|e| pdfcraft_edit::page_images(&e.cos, page).ok()).unwrap_or_default()
@@ -188,77 +245,14 @@ impl Document {
     }
 
     /// Save image as: image `index` on `page` as a file (extension, bytes).
-    /// If the item is a raster image or a Form holding a raster image, extracts its original
-    /// file (JPEG/PNG). If it is vector/grouped Form artwork, renders it as a crisp high-res PNG.
     pub fn page_image_file(&self, page: usize, index: usize) -> Result<(&'static str, Vec<u8>), String> {
         self.check_copying().map_err(|e| e.to_string())?;
-        if let Ok((ext, bytes)) = self.page_image_copy_file(page, index) {
-            return Ok((ext, bytes));
-        }
-        self.render_page_image_png(page, index)
-    }
-
-    /// Render image or vector artwork `index` on `page` as a crisp high-resolution PNG file.
-    pub fn render_page_image_png(&self, page: usize, index: usize) -> Result<(&'static str, Vec<u8>), String> {
-        self.check_copying().map_err(|e| e.to_string())?;
-        let info = self.info.pages.get(page).ok_or_else(|| format!("page {} has no page info", page + 1))?;
+        let editor = self.editor.as_ref().ok_or("the document can't be read")?;
         let img = self.page_images(page).into_iter().nth(index).ok_or_else(|| format!("page {} has no image {}", page + 1, index + 1))?;
-        let rect = img.visible_rect.unwrap_or(img.rect);
-
-        let p0 = info.user_to_view(rect[0] as f32, rect[1] as f32);
-        let p1 = info.user_to_view(rect[2] as f32, rect[3] as f32);
-        let vx0 = p0[0].min(p1[0]).max(0.0);
-        let vy0 = p0[1].min(p1[1]).max(0.0);
-        let vx1 = p0[0].max(p1[0]).min(info.width);
-        let vy1 = p0[1].max(p1[1]).min(info.height);
-
-        let vw = vx1 - vx0;
-        let vh = vy1 - vy0;
-        if vw < 1.0 || vh < 1.0 {
-            return Err("the artwork has no visible area to save".into());
+        if img.is_form {
+            return Err("grouped Form artwork is not a bitmap; Save Image As is only available for raster images".into());
         }
-
-        // Aim for crisp ~300 DPI (approx 4.16x) or at least 2400px on the longer side
-        let scale: f32 = (2400.0 / vw.max(vh)).clamp(2.0, 4.1667);
-        let tile = pdfcraft_render::Tile {
-            x: (vx0 * scale).floor().max(0.0) as u32,
-            y: (vy0 * scale).floor().max(0.0) as u32,
-            w: (vw * scale).ceil().max(1.0) as u32,
-            h: (vh * scale).ceil().max(1.0) as u32,
-        };
-
-        if (tile.w as u64) * (tile.h as u64) > pdfcraft_render::MAX_PIXELS as u64 {
-            return Err("the artwork area is too large to render".into());
-        }
-
-        let config = pdfcraft_render::RenderConfig {
-            password: self.password.as_deref().map(std::sync::Arc::from),
-            ..pdfcraft_render::RenderConfig::default()
-        };
-        let mut r = pdfcraft_render::PageRenderer::new(self.bytes.clone(), config);
-        let shot = r.render(pdfcraft_render::RenderRequest {
-            page,
-            kind: pdfcraft_render::RequestKind::Pixels,
-            tile: Some(tile),
-            scale,
-            tag: 0,
-            preview: false,
-        });
-        if let Some(e) = shot.error {
-            return Err(e);
-        }
-
-        let mut png_bytes = Vec::new();
-        image::ImageEncoder::write_image(
-            image::codecs::png::PngEncoder::new(&mut png_bytes),
-            &shot.rgba,
-            shot.width,
-            shot.height,
-            image::ExtendedColorType::Rgba8,
-        )
-        .map_err(|e| format!("could not encode PNG: {e}"))?;
-
-        Ok(("png", png_bytes))
+        pdfcraft_create::image_file(&editor.cos, img.object.ok_or("the image has no object")?)
     }
 
     /// Edit a PDF ▸ Edit text: the paragraphs on `page` (0-based).
@@ -300,6 +294,16 @@ impl Document {
         self.generation
     }
 
+    /// The styles the document's text is set in, the largest first, for bookmarks from text
+    /// styles (#1693).
+    /// Empty when the document doesn't allow copying: the samples are its text.
+    pub fn text_styles(&self) -> Vec<crate::text_style_bookmarks::TextStyleUse> {
+        if !self.allows_copying() {
+            return Vec::new();
+        }
+        self.editor.as_ref().map(|e| crate::text_style_bookmarks::styles(&e.cos)).unwrap_or_default()
+    }
+
     /// Edit a PDF ▸ Edit text: the lines of existing text on `page` (0-based).
     pub fn text_lines(&self, page: usize) -> Vec<pdfcraft_edit::TextLine> {
         self.editor.as_ref().and_then(|e| pdfcraft_edit::text_lines(&e.cos, page).ok()).unwrap_or_default()
@@ -309,6 +313,11 @@ impl Document {
     /// formula reads, what is wrong with the order, and the order Fix order writes.
     pub fn calculation_order(&self) -> CalculationOrder {
         self.editor.as_ref().map(|e| pdfcraft_forms::calculation_order(&e.cos, &self.form)).unwrap_or_default()
+    }
+
+    /// Page properties ▸ Tab order: each page's tab order, in page order.
+    pub fn tab_orders(&self) -> Vec<TabOrder> {
+        self.editor.as_ref().map(|e| pdfcraft_forms::tab_orders(&e.cos)).unwrap_or_default()
     }
 
     /// Add alternate text: the figures, in document order.
@@ -366,6 +375,13 @@ impl Document {
     /// Whether comments are hidden (Comments ▸ Hide all comments).
     pub fn comments_hidden(&self) -> bool {
         self.config.hide_comments
+    }
+
+    /// Whether `Edit::DeleteAnnotation` would delete the annotation at `(page, index)`: the
+    /// engine's own check (it, and every reply that would go with it, unlocked), for a Delete
+    /// command to ask before it is offered.
+    pub fn annotation_deletable(&self, page: usize, index: usize) -> bool {
+        self.editor.as_ref().is_some_and(|e| pdfcraft_annot::deletable(&e.cos, page, index).is_ok())
     }
 
     pub fn can_undo(&self) -> Option<&str> {
