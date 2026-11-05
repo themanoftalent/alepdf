@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/screenshots/alepdf-welcome.png" width="96" height="96" style="border-radius: 20px;" alt="AlePdf Icon">
+  <img src="assets/app-icon/pdfcraft-1024.png" width="128" height="128" alt="AlePdf Icon">
 </p>
 
 <h1 align="center">AlePdf</h1>
@@ -27,9 +27,9 @@
 <br>
 
 <p align="center">
-  <img src="assets/screenshots/alepdf-editor.png" alt="AlePdf in action: PDF editor and workspace" width="100%">
+  <img src="assets/screenshots/alepdf-welcome.png" alt="AlePdf Welcome & Tools Hub" width="100%">
   <br>
-  <sub>AlePdf native workspace: in-place PDF editing, threaded comments, and full document tools.</sub>
+  <sub>AlePdf Welcome &amp; Tools Hub: modern native workbench with tools for in-place editing, page organizing, forms, and security.</sub>
 </p>
 
 ---
