@@ -524,6 +524,7 @@ impl PdfCraftApp {
             "ocr.recognize" => self.dialog = Some(Dialog::RecognizeText),
             "ocr.recognize_batch" => self.ocr_files_dialog(),
             "edit.edit_text" => {
+                self.mode = crate::Mode::Edit;
                 self.quick_tool = crate::QuickTool::EditText;
                 self.left = crate::LeftPanel::Tool("edit");
                 self.reveal_tools();

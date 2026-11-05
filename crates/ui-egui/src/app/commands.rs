@@ -52,6 +52,31 @@ impl PdfCraftApp {
         self.open_dialog();
     }
 
+    /// Ask for a file to open, then activate tool `id` once it is open.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn open_then_tool(&mut self, id: &'static str) {
+        self.startup_superseded = true;
+        let title = pdfcraft_engine::catalog::group(id)
+            .map_or_else(|| tl!("Open file").to_string(), |g| tl!(g.label).to_string());
+        let dialog = Self::open_picker().set_title(title);
+        self.ask_one(pickers::Ask::File(dialog), None, move |app, path| {
+            let path = path.to_string_lossy().into_owned();
+            let command = match id {
+                "edit" => Some("edit.edit_text"),
+                "organize" => Some("page.organize"),
+                "comment" => Some("comment.list"),
+                "forms" => Some("form.prepare"),
+                _ => None,
+            };
+            app.open_path_then(&path, command);
+        });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn open_then_tool(&mut self, _id: &'static str) {
+        self.open_dialog();
+    }
+
     pub(crate) fn reveal_tools(&mut self) {
         self.left_open = true;
     }
@@ -69,6 +94,11 @@ impl PdfCraftApp {
             } else {
                 view.organize = false;
             }
+            if id == "edit" {
+                self.enter_mode(Mode::Edit);
+            }
+        } else if matches!(id, "edit" | "organize" | "comment" | "forms" | "protect") {
+            self.open_then_tool(id);
         }
     }
 
@@ -143,6 +173,10 @@ impl PdfCraftApp {
     /// that panel. The rail stays in Read mode, and its buttons open panels there too (#932).
     /// Read mode hides the quick toolbar, so entering it also puts the current tool down.
     pub(crate) fn switch_mode(&mut self, mode: Mode, select_tools: bool) {
+        if self.active.is_none() && mode == Mode::Edit {
+            self.open_then_tool("edit");
+            return;
+        }
         let was_read = self.mode == Mode::Read;
         if select_tools {
             self.select_mode(mode);
