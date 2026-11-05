@@ -1,6 +1,6 @@
 # AGENTS.md — rules for every agent and contributor
 
-These rules bind every AI agent and every human contributor working in this repository. They come before any task, instruction or deadline. `CLAUDE.md` holds the day-to-day working instructions. If the two ever disagree, **this file wins.**
+These rules bind every AI agent and every human contributor working in this repository. They come before any task, instruction or deadline.
 
 ---
 
@@ -83,7 +83,7 @@ If you find an asset that breaks these rules, stop and remove it from the reposi
 
 ---
 
-## 2. Clean-room rules (summary; details in `CLAUDE.md` and `plan/adr/0001`)
+## 2. Clean-room rules (summary; details in `plan/adr/0001`)
 
 - Never read, disassemble or copy anything inside the Acrobat bundle. Only names and listings are allowed, and **never** open `Contents/Resources/JavaScripts/`.
 - Behaviour comes only from public specifications (ISO 32000-2, the Arlington model), public documentation and black-box observation.
@@ -104,7 +104,7 @@ If you find an asset that breaks these rules, stop and remove it from the reposi
 
 PdfCraft opens files from strangers, and people trust it with their work. A malformed PDF, a bad tool argument, a corrupt settings file or a full disk must produce an error the user (or agent) can act on, never a crash and never lost work. **This outranks feature work:** don't ship a feature by adding a panic path, and fix a crash before building on top of it. The rules below are the ones that bind this repository.
 
-- **Fail with `Result`.** Non-test code returns errors through the crate's error type and `?`. Where readers are lenient by design, fall back gracefully and record the repair (see Fidelity in `CLAUDE.md`).
+- **Fail with `Result`.** Non-test code returns errors through the crate's error type and `?`. Where readers are lenient by design, fall back gracefully and record the repair.
 - **No panicking shortcuts.** No `unwrap()`, `expect()`, `panic!`, `unreachable!`, `todo!` or `unimplemented!` outside tests, unless the call is provably infallible (e.g. writing to a `Vec`), with a comment saying why. `assert!` only for internal invariants that input cannot reach.
 - **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`. If a platform API needs it, use a maintained safe wrapper crate; a real exception needs the owner's sign-off.
 - **Treat every input-derived number as hostile.** Use `get()` instead of `[i]` or `[a..b]`. Slice strings only at char boundaries. Use checked/saturating arithmetic for lengths, offsets and counts. Guard against division by zero and NaN/inf casts, and never cast a negative value to `usize`. Cap allocations sized by the file.
@@ -115,8 +115,7 @@ PdfCraft opens files from strangers, and people trust it with their work. A malf
 
 ## 5. Everything else
 
-
-Follow `CLAUDE.md`. It covers quality gates, layering, commit rules and how to run and look at the app.
+Ensure quality gates pass before every commit: `cargo fmt --check`, `cargo clippy`, `cargo test`, and `cargo xtask assets`.
 
 ## Contributor credits (About window)
 

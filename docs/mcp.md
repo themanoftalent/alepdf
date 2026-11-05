@@ -33,7 +33,7 @@ the client after changing its environment.
 Register the installed command explicitly (replace `/work/project` with an existing folder):
 
 ```sh
-claude mcp add pdfcraft -- pdfcraft-cli mcp --root /work/project
+pdfcraft-cli mcp --root /work/project
 ```
 
 Other MCP clients can use this bare-name configuration:

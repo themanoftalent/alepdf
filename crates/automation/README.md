@@ -123,9 +123,9 @@ The release packages ship `pdfcraft-cli` alongside the desktop app, so no build 
 
 ```sh
 # Windows (PowerShell), default install folder
-claude mcp add pdfcraft -- "$env:LOCALAPPDATA\Programs\AlePdf\pdfcraft-cli.exe" mcp --root <dir>
+pdfcraft-cli.exe mcp --root <dir>
 # Linux, or macOS with the CLI unzipped onto PATH
-claude mcp add pdfcraft -- pdfcraft-cli mcp --root <dir>
+pdfcraft-cli mcp --root <dir>
 ```
 
 ## Adding a tool

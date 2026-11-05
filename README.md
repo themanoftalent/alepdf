@@ -127,7 +127,7 @@ Download pre-built releases directly from our [Official Website](https://alepdf-
 
 ## Built for Agents &amp; CLI
 
-AlePdf includes a powerful command-line interface (`pdfcraft-cli` / `alepdf-cli`) and built-in **Model Context Protocol (MCP)** support, allowing external scripts and AI agents (such as Claude, Codex, or local agents) to inspect, render, and modify PDFs programmatically:
+AlePdf includes a powerful command-line interface (`pdfcraft-cli` / `alepdf-cli`) and built-in **Model Context Protocol (MCP)** support, allowing external scripts, automation tools, and AI agents to inspect, render, and modify PDFs programmatically:
 
 ```sh
 # Inspect document structure as JSON

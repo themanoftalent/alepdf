@@ -656,7 +656,7 @@ fn tool_table_is_well_formed() {
         }
         assert!(!(t.read_only && t.destructive), "{} is both read-only and destructive", t.name);
         for k in ["oneOf", "anyOf", "allOf"] {
-            assert!(t.input_schema.get(k).is_none(), "{}: top-level {k} in input_schema is rejected by MCP clients such as Claude", t.name);
+            assert!(t.input_schema.get(k).is_none(), "{}: top-level {k} in input_schema is rejected by standard MCP clients", t.name);
         }
         if let Some(c) = t.command {
             assert!(pdfcraft_engine::commands::command(c).is_some(), "{} names unregistered command {c}", t.name);
@@ -1633,7 +1633,7 @@ fn mcp_session_over_stdio() {
     assert_eq!(replies.len(), 4, "the notification gets no reply");
 
     assert_eq!(replies[0]["result"]["protocolVersion"], "2025-03-26");
-    assert_eq!(replies[0]["result"]["serverInfo"]["name"], "pdfcraft");
+    assert_eq!(replies[0]["result"]["serverInfo"]["name"], "alepdf");
     assert_eq!(replies[1]["result"]["tools"].as_array().unwrap().len(), tools().len());
     assert_eq!(replies[2]["result"]["structuredContent"]["pages"], 3);
     assert_eq!(replies[2]["result"]["isError"], false);
