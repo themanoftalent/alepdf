@@ -670,7 +670,7 @@ theme	Appearance	Giao diện
 	JavaScript is turned off (Preferences ▸ JavaScript).	JavaScript đã bị tắt (Tùy chọn > JavaScript).
 	JavaScript, e.g. getField("total").value	JavaScript, ví dụ getField("total").value
 	Join our Discord	Tham gia Discord của chúng tôi
-	Join the ArtCraft community	Tham gia cộng đồng ArtCraft
+	Join the AlePdf community	Tham gia cộng đồng AlePdf
 	Justify	Căn đều
 	Keep source fonts	Giữ phông chữ nguồn
 	Keep tool selected	Giữ công cụ được chọn
@@ -1385,7 +1385,7 @@ theme	Appearance	Giao diện
 	Archive documents	Lưu trữ tài liệu
 	Area	Diện tích
 	Arrow	Mũi tên
-	ArtCraft website	Trang web ArtCraft
+	AlePdf website	Trang web AlePdf
 	Ask about this document	Hỏi về tài liệu này
 	Attach a file	Đính kèm một tệp
 	Attach file	Đính kèm tệp
@@ -1524,7 +1524,7 @@ theme	Appearance	Giao diện
 	Insert text	Chèn văn bản
 	JavaScript	JavaScript
 	JavaScript console…	Bảng điều khiển JavaScript…
-	Join the ArtCraft Discord	Tham gia Discord của ArtCraft
+	Join the AlePdf Discord	Tham gia Discord của AlePdf
 	Light gray	Xám nhạt
 	Line	Đường thẳng
 	Link	Liên kết
