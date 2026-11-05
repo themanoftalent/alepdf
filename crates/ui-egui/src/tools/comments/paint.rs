@@ -241,12 +241,26 @@ pub(super) fn erase(cx: &PageCx<'_>, path: &[[f64; 2]]) -> Option<Edit> {
         })
         .map(|a| a.index)
         .collect();
-    if hits.is_empty() {
+
+    let markup_hits: Vec<usize> = cx
+        .comments()
+        .filter(|a| matches!(a.subtype.as_str(), "Highlight" | "Underline" | "StrikeOut" | "Squiggly") && !a.locked)
+        .filter(|a| {
+            let r = a.rect;
+            (r[0] as f64) <= b[2] + radius && (r[2] as f64) >= b[0] - radius && (r[1] as f64) <= b[3] + radius && (r[3] as f64) >= b[1] - radius
+        })
+        .map(|a| a.index)
+        .collect();
+
+    if hits.is_empty() && markup_hits.is_empty() {
         return None;
     }
     // Later indices first: deleting an emptied drawing shifts the ones after it.
     hits.sort_unstable_by(|a, b| b.cmp(a));
-    let edits = hits.into_iter().map(|index| Edit::EraseInk { page: cx.page, index, path: path.to_vec(), radius }).collect();
+    let mut edits: Vec<Edit> = hits.into_iter().map(|index| Edit::EraseInk { page: cx.page, index, path: path.to_vec(), radius }).collect();
+    for index in markup_hits {
+        edits.push(Edit::DeleteAnnotation { page: cx.page, index });
+    }
     Some(Edit::Batch { label: "Erase".into(), edits })
 }
 

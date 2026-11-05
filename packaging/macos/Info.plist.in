@@ -7,13 +7,13 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>PdfCraft</string>
+  <string>AlePdf</string>
   <key>CFBundleName</key>
-  <string>PdfCraft</string>
+  <string>AlePdf</string>
   <key>CFBundleExecutable</key>
-  <string>PdfCraft</string>
+  <string>AlePdf</string>
   <key>CFBundleIdentifier</key>
-  <string>ai.storyteller.pdfcraft</string>
+  <string>com.alepdf.editor</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -24,14 +24,14 @@
   <string>@SHORT_VERSION@</string>
   <key>CFBundleVersion</key>
   <string>@SHORT_VERSION@</string>
-  <key>PdfCraftVersion</key>
+  <key>AlePdfVersion</key>
   <string>@VERSION@</string>
-  <key>PdfCraftBuildCommit</key>
+  <key>AlePdfBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>PdfCraft</string>
+  <string>AlePdf</string>
   <key>LSApplicationCategoryType</key>
-  <string>public.app-category.graphics-design</string>
+  <string>public.app-category.productivity</string>
   <!-- Must match MACOSX_DEPLOYMENT_TARGET in package.sh. Big Sur is the first release on
        Apple silicon and has the Metal feature set wgpu targets. -->
   <key>LSMinimumSystemVersion</key>
@@ -60,7 +60,7 @@
       <key>LSHandlerRank</key>
       <string>Alternate</string>
       <key>CFBundleTypeIconFile</key>
-      <string>PdfCraft</string>
+      <string>AlePdf</string>
       <key>LSItemContentTypes</key>
       <array><string>com.adobe.pdf</string></array>
       <key>CFBundleTypeExtensions</key>

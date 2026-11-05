@@ -708,6 +708,7 @@ pub(crate) fn run_edit(doc: &mut pdfcraft_cos::Document, edit: &Edit, cx: &mut E
         Edit::MoveObjects { page, objects, offset } => pdfcraft_edit::move_objects(doc, *page, objects, *offset)?,
         Edit::EditTextBlock { page, block, text, style } => {
             pdfcraft_edit::rewrite_block(doc, *page, *block, Some(text), style)?;
+            clean_orphaned_markup_annotations(doc, *page);
         }
         Edit::RegisterTextFont { page, bytes } => {
             pdfcraft_edit::text::register_text_font(doc, *page, bytes)?;
@@ -913,4 +914,98 @@ pub(crate) fn run_edit(doc: &mut pdfcraft_cos::Document, edit: &Edit, cx: &mut E
         }
     }
     Ok(())
+}
+
+fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document, page: usize) {
+    let Ok(lines) = pdfcraft_edit::text::text_lines(doc, page) else { return };
+    let line_rects: Vec<[f64; 4]> = lines.into_iter().filter(|l| !l.text.trim().is_empty()).map(|l| l.rect).collect();
+
+    let Ok(p) = pdfcraft_annot::page_ref(doc, page) else { return };
+    let annots = pdfcraft_annot::annots(doc, p);
+
+    let mut doomed_indices = Vec::new();
+    let mut modified_annots: Vec<(usize, Vec<f64>, [f64; 4])> = Vec::new();
+
+    for (index, item) in annots.iter().enumerate() {
+        let obj = doc.resolve(item);
+        let Some(d) = obj.as_dict() else { continue };
+        let Some(subtype) = d.name(b"Subtype") else { continue };
+        if !matches!(subtype, b"Highlight" | b"Underline" | b"StrikeOut" | b"Squiggly") {
+            continue;
+        }
+
+        if let Some(qp_obj) = d.get(b"QuadPoints")
+            && let Some(arr) = doc.resolve(qp_obj).as_array()
+        {
+            let numbers: Vec<f64> = arr.iter().filter_map(|o| doc.resolve(o).as_f64()).collect();
+            let mut surviving_quads = Vec::new();
+            let mut new_min_x = f64::INFINITY;
+            let mut new_max_x = f64::NEG_INFINITY;
+            let mut new_min_y = f64::INFINITY;
+            let mut new_max_y = f64::NEG_INFINITY;
+
+            for chunk in numbers.chunks_exact(8) {
+                let xs = [chunk[0], chunk[2], chunk[4], chunk[6]];
+                let ys = [chunk[1], chunk[3], chunk[5], chunk[7]];
+                let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
+                let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+                let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
+                let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+
+                let has_text = line_rects.iter().any(|lr| {
+                    (lr[0] - 2.0) <= max_x && (lr[2] + 2.0) >= min_x && (lr[1] - 2.0) <= max_y && (lr[3] + 2.0) >= min_y
+                });
+                if has_text {
+                    surviving_quads.extend_from_slice(chunk);
+                    new_min_x = new_min_x.min(min_x);
+                    new_max_x = new_max_x.max(max_x);
+                    new_min_y = new_min_y.min(min_y);
+                    new_max_y = new_max_y.max(max_y);
+                }
+            }
+
+            if surviving_quads.is_empty() {
+                doomed_indices.push(index);
+            } else if surviving_quads.len() < numbers.len() {
+                modified_annots.push((index, surviving_quads, [new_min_x, new_min_y, new_max_x, new_max_y]));
+            }
+        } else if let Some(r_obj) = d.get(b"Rect")
+            && let Some(arr) = doc.resolve(r_obj).as_array()
+        {
+            let nums: Vec<f64> = arr.iter().filter_map(|o| doc.resolve(o).as_f64()).collect();
+            if nums.len() == 4 {
+                let (min_x, max_x) = (nums[0].min(nums[2]), nums[0].max(nums[2]));
+                let (min_y, max_y) = (nums[1].min(nums[3]), nums[1].max(nums[3]));
+                let has_text = line_rects.iter().any(|lr| {
+                    (lr[0] - 2.0) <= max_x && (lr[2] + 2.0) >= min_x && (lr[1] - 2.0) <= max_y && (lr[3] + 2.0) >= min_y
+                });
+                if !has_text {
+                    doomed_indices.push(index);
+                }
+            }
+        }
+    }
+
+    for (index, new_quads, new_rect) in modified_annots {
+        if let Some(item) = annots.get(index)
+            && let Some(r) = item.as_ref()
+        {
+            let _ = doc.update_dict(r, |d| {
+                let qp_arr = new_quads.into_iter().map(pdfcraft_cos::Object::Real).collect();
+                d.set(b"QuadPoints".as_slice(), pdfcraft_cos::Object::Array(qp_arr));
+                let r_arr = vec![
+                    pdfcraft_cos::Object::Real(new_rect[0]),
+                    pdfcraft_cos::Object::Real(new_rect[1]),
+                    pdfcraft_cos::Object::Real(new_rect[2]),
+                    pdfcraft_cos::Object::Real(new_rect[3]),
+                ];
+                d.set(b"Rect".as_slice(), pdfcraft_cos::Object::Array(r_arr));
+            });
+        }
+    }
+
+    doomed_indices.sort_unstable_by(|a, b| b.cmp(a));
+    for index in doomed_indices {
+        let _ = pdfcraft_annot::delete_annotation(doc, page, index);
+    }
 }

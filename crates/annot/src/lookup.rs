@@ -69,12 +69,12 @@ impl Iterator for PageWalk<'_> {
     }
 }
 
-pub(crate) fn page_ref(doc: &Document, page: usize) -> Result<ObjRef, AnnotError> {
+pub fn page_ref(doc: &Document, page: usize) -> Result<ObjRef, AnnotError> {
     page_refs(doc)?.get(page).copied().ok_or(AnnotError::NoSuchPage(page))
 }
 
 /// The entries of a page's `/Annots` (references or inline dictionaries).
-pub(crate) fn annots(doc: &Document, page: ObjRef) -> Vec<Object> {
+pub fn annots(doc: &Document, page: ObjRef) -> Vec<Object> {
     let obj = doc.get(page);
     let Some(a) = obj.as_dict().and_then(|d| d.get(b"Annots")) else { return Vec::new() };
     let list = doc.resolve(a).as_array().cloned().unwrap_or_default();

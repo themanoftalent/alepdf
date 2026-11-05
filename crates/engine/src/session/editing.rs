@@ -443,6 +443,11 @@ impl Session {
         if touches_added || touches_marks {
             doc.marker_scan = OnceLock::new();
         }
+        if edit.is_none() || matches!(edit, Some(Edit::EditTextBlock { .. } | Edit::EditTextLine { .. })) {
+            doc.info.annotations = comment_list(&editor.cos);
+            doc.links = OnceLock::new();
+            editor.appearances.clear();
+        }
         doc.info.file_size = bytes.len();
         let signatures = if doc.signatures.is_empty() { Vec::new() } else { signatures_of(&editor.cos, &bytes, &doc.trust, &doc.sig_cache) };
         doc.display = display_bytes(Some(editor), &bytes);

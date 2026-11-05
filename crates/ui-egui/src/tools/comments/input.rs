@@ -44,7 +44,7 @@ pub(crate) fn page_input(ui: &egui::Ui, resp: &egui::Response, cx: &PageCx<'_>, 
         QuickTool::Comment(CommentTool::Attach) => gestures.attach(view),
         QuickTool::Comment(CommentTool::Caret) => gestures.caret(view, caret_text.as_deref()),
         QuickTool::Comment(tool @ (CommentTool::Note | CommentTool::TextBox)) => gestures.note_or_box(view, tool),
-        QuickTool::Select => select_input(ui, resp, cx, view, press, pointer, origin),
+        QuickTool::Select | QuickTool::EditText => select_input(ui, resp, cx, view, press, pointer, origin),
         _ => false,
     }
 }

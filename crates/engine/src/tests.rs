@@ -8814,6 +8814,29 @@ fn edited_text_keeps_every_space_typed_through_save_and_reopen() {
     assert_eq!(blocks[0].editor_text, typed);
 }
 
+#[test]
+fn deleting_text_in_edit_cleans_orphaned_highlight_annotations() {
+    let (mut s, id) = session_with(1);
+    let quad = [20.0, 750.0, 150.0, 750.0, 20.0, 730.0, 150.0, 730.0];
+    let highlight = NewAnnotation {
+        page: 0,
+        shape: Shape::TextMarkup { kind: Markup::Highlight, quads: vec![quad] },
+        style: Default::default(),
+        contents: String::new(),
+        author: String::new(),
+    };
+    s.apply(id, Edit::AddAnnotation(highlight)).unwrap();
+    assert_eq!(s.get(id).unwrap().info.annotations.len(), 1);
+
+    // Delete the text in that block by editing to empty string
+    s.apply(id, Edit::EditTextBlock { page: 0, block: 0, text: String::new(), style: pdfcraft_edit::BlockStyle::default() }).unwrap();
+
+    // Verify orphaned highlight annotation was automatically cleaned up
+    let info = &s.get(id).unwrap().info;
+    let highlights: Vec<_> = info.annotations.iter().filter(|a| a.subtype == "Highlight").collect();
+    assert!(highlights.is_empty(), "Orphaned highlight should be deleted when text is deleted");
+}
+
 /// A new document, or one restored from recovery, has never been written where it belongs: undo
 /// back to the bytes it was opened from must not make it clean, or closing it would discard the
 /// whole document without asking. Saving makes it clean; Revert of a saved one too.
