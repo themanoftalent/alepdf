@@ -1,10 +1,10 @@
 //! Pinned tools on Home: pin tools, unpin tools, persistence across sessions,
 //! selection modal, and the sidebar pin toggle.
 
+use crate::support;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use pdfcraft_ui_egui::{Dialog, LeftPanel, Mode, PdfCraftApp, QuickTool};
-use crate::support;
 
 fn fixture(n: usize) -> Vec<u8> {
     let mut objs: Vec<String> = vec!["<< /Type /Catalog /Pages 2 0 R >>".into()];
@@ -217,4 +217,3 @@ fn clicking_edit_a_pdf_on_home_opens_picker_and_enters_edit_mode() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
-

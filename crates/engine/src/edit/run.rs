@@ -965,12 +965,7 @@ pub(crate) fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document
                         if (t_min_x - min_x).abs() > 2.0 || (t_max_x - max_x).abs() > 2.0 {
                             quads_changed = true;
                         }
-                        let quad = [
-                            t_min_x, chunk[1],
-                            t_max_x, chunk[3],
-                            t_min_x, chunk[5],
-                            t_max_x, chunk[7],
-                        ];
+                        let quad = [t_min_x, chunk[1], t_max_x, chunk[3], t_min_x, chunk[5], t_max_x, chunk[7]];
                         surviving_quads.extend_from_slice(&quad);
                         new_min_x = new_min_x.min(t_min_x);
                         new_max_x = new_max_x.max(t_max_x);
@@ -996,9 +991,8 @@ pub(crate) fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document
             if nums.len() == 4 {
                 let (min_x, max_x) = (nums[0].min(nums[2]), nums[0].max(nums[2]));
                 let (min_y, max_y) = (nums[1].min(nums[3]), nums[1].max(nums[3]));
-                let has_text = line_rects.iter().any(|lr| {
-                    (lr[0] - 2.0) <= max_x && (lr[2] + 2.0) >= min_x && (lr[1] - 2.0) <= max_y && (lr[3] + 2.0) >= min_y
-                });
+                let has_text =
+                    line_rects.iter().any(|lr| (lr[0] - 2.0) <= max_x && (lr[2] + 2.0) >= min_x && (lr[1] - 2.0) <= max_y && (lr[3] + 2.0) >= min_y);
                 if !has_text {
                     doomed_indices.push(index);
                 }
@@ -1036,10 +1030,7 @@ pub(crate) fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document
         }
     }
 
-    let doomed_refs: Vec<pdfcraft_cos::ObjRef> = doomed_indices
-        .iter()
-        .filter_map(|&i| annots.get(i).and_then(|item| item.as_ref()))
-        .collect();
+    let doomed_refs: Vec<pdfcraft_cos::ObjRef> = doomed_indices.iter().filter_map(|&i| annots.get(i).and_then(|item| item.as_ref())).collect();
 
     for r in doomed_refs {
         let cur = pdfcraft_annot::annots(doc, p);

@@ -267,10 +267,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             }
             ui.add_space(20.0);
             widgets::section_title(ui, tl!("Privacy"));
-            ui.label(
-                egui::RichText::new("AlePdf works offline. No telemetry, no account, and no cloud processing.")
-                    .color(t.text_muted),
-            );
+            ui.label(egui::RichText::new("AlePdf works offline. No telemetry, no account, and no cloud processing.").color(t.text_muted));
         });
     });
 }
