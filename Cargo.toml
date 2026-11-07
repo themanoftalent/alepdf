@@ -75,7 +75,7 @@ weezl = "0.2"
 # CCITT Group 4 encoding (pdfcraft-filters); already in the tree through tiff.
 fax = "0.3.0"
 # Independent CCITT and JBIG2 codecs, already in the tree through hayro.
-hayro-ccitt = "0.4"
+hayro-ccitt = "0.5"
 hayro-jbig2 = "0.3"
 
 # foundation
