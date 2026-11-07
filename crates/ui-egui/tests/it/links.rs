@@ -1,5 +1,5 @@
-//! Community links: the Discord button is one click away everywhere; Help menu, About dialog and
-//! home screen open the ArtCraft and PdfCraft pages.
+//! AlePdf links: the website button is one click away everywhere; Help, About, and Home
+//! expose the official project destinations.
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
@@ -20,7 +20,7 @@ fn harness(setup: impl FnOnce(&mut PdfCraftApp) + 'static) -> Harness<'static, P
 #[test]
 fn website_button_in_the_top_bar_opens_website() {
     let mut h = harness(|_| {});
-    h.get_by_label("AlePdf").click();
+    h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("AlePdf")).click();
     h.run_steps(2);
     assert_eq!(h.state().last_opened_url.as_deref(), Some(links::WEBSITE));
     assert_eq!(links::WEBSITE, "https://alepdf-website.vercel.app/");
@@ -30,7 +30,7 @@ fn website_button_in_the_top_bar_opens_website() {
 fn home_screen_links() {
     for (label, url) in [("AlePdf Website", links::WEBSITE), ("AlePdf on GitHub", "https://github.com/themanoftalent/alepdf")] {
         let mut h = harness(|_| {});
-        h.get_by_label("AlePdf");
+        h.get_by_label("Official Website & Project Updates");
         h.get_by_label(label).click();
         h.run_steps(2);
         assert_eq!(h.state().last_opened_url.as_deref(), Some(url), "{label}");
@@ -40,7 +40,7 @@ fn home_screen_links() {
 #[test]
 fn home_community_card_closes_for_this_run() {
     let mut h = harness(|_| {});
-    h.get_by_label("AlePdf");
+    h.get_by_label("Official Website & Project Updates");
     h.get_by_label("Close").click();
     h.run_steps(2);
     assert!(h.state().community_card_closed);
@@ -104,5 +104,5 @@ fn about_dialog_has_contributors_and_models_tabs() {
     settled(&mut h, "Brandon Thomas");
     settled(&mut h, "Models").click();
     h.run_steps(4);
-    assert!(h.query_all_by_label("Anthropic").count() >= 1);
+    assert!(h.query_all_by_label("OpenAI").count() >= 1);
 }

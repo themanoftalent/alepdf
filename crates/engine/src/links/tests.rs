@@ -325,3 +325,11 @@ fn hosts_are_shown_as_the_browser_receives_them() {
         assert_eq!(document_url(bad), Err(B::Malformed), "{bad}");
     }
 }
+
+#[test]
+fn legacy_community_commands_open_the_current_website() {
+    for id in ["help.discord", "help.app_page", "help.website"] {
+        assert_eq!(super::for_command(id).map(|link| link.url), Some(super::WEBSITE));
+    }
+    assert!(super::for_command("help.unknown").is_none());
+}

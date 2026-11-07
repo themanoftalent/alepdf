@@ -209,6 +209,8 @@ fn organize_opens_on_the_current_page() {
 #[test]
 fn organize_tool_chosen_before_opening_a_document_shows_its_pages() {
     let mut app = PdfCraftApp::new();
+    // Tool selection now offers Open PDF; headless tests model cancelling that picker.
+    app.pick_override = Some(vec![]);
     app.set_option("tool", "organize").unwrap();
     app.open_bytes("doc.pdf", None, fixture(3)).unwrap();
     assert!(app.views[0].organize);
@@ -4125,20 +4127,17 @@ fn the_read_mode_command_applies_an_open_paragraph_and_puts_edit_text_down() {
     assert_edit_text_put_down_and_the_paragraph_applied(h.state());
 }
 
-/// The Edit panel's back arrow (it has one when opened from All tools; the Edit tab is its own way
-/// back) leaves for All tools as the mode bar does: Edit text & images is put down and a paragraph
-/// still open in the editor is applied, instead of every paragraph keeping its box, and the editor
-/// staying open, under All tools.
+/// The Edit command enters the Edit workspace. Returning to All tools applies an open
+/// paragraph and puts down the editing tool rather than leaving editable boxes behind.
 #[test]
-fn the_edit_panel_back_arrow_applies_an_open_paragraph_and_puts_edit_text_down() {
+fn the_edit_command_enters_edit_and_all_tools_applies_an_open_paragraph() {
     use pdfcraft_ui_egui::{LeftPanel, Mode, QuickTool};
     let mut h = harness(1, |_| {});
-    // All tools ▸ Edit a PDF ▸ Edit text & images: the Edit panel, under All tools.
     assert!(h.state_mut().execute("edit.edit_text"));
     h.run_steps(3);
-    assert_eq!((h.state().mode, h.state().quick_tool), (Mode::AllTools, QuickTool::EditText));
+    assert_eq!((h.state().mode, h.state().quick_tool), (Mode::Edit, QuickTool::EditText));
     open_the_first_line(&mut h);
-    h.get_by_label("Back to all tools").click();
+    h.get_by_label("All tools").click();
     h.run_steps(3);
     assert_eq!((h.state().mode, h.state().left), (Mode::AllTools, LeftPanel::AllTools));
     assert_edit_text_put_down_and_the_paragraph_applied(h.state());

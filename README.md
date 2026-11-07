@@ -218,3 +218,11 @@ AlePdf is open-source software dual-licensed under:
 at your option.
 
 All bundled open-source fonts, icons, and dependencies retain their respective licenses, detailed in [ATTRIBUTION.md](ATTRIBUTION.md) and [NOTICE](NOTICE).
+
+## iPhone and iPad companion
+
+The native iOS AlePdf app is a separate SwiftUI/PDFKit implementation, not this Rust desktop binary. As of November 7, 2026, iOS version 1.0 (build 6) is waiting for App Store review. It offers a redesigned Home and reader, selectable-text page search, annotations, page organization, and local working copies. Approval and public availability are pending. These iOS interface changes are not included in the macOS maintenance release, and feature parity between the platforms is not claimed.
+
+### macOS 0.18.3 maintenance candidate
+
+Packages the desktop branding, dependency compatibility, and macOS extended-attribute fixes already merged after 0.18.2, and corrects the Linux launcher window class to match the AlePdf app ID. This is not an iOS-interface port. Public release is pending final verification and Apple notarization. The existing 0.18.2 macOS download is ad-hoc signed and not notarized, so macOS may block it. No security bypass is recommended.

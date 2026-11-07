@@ -28,6 +28,8 @@ pub const LINKS: &[Link] = &[
 ];
 
 pub fn for_command(id: &str) -> Option<&'static Link> {
+    // Preserve command-palette and automation aliases after the AlePdf rebrand.
+    let id = if matches!(id, "help.discord" | "help.app_page") { "help.website" } else { id };
     LINKS.iter().find(|l| l.command == id)
 }
 

@@ -1418,18 +1418,17 @@ fn the_link_tools_hand_stops_at_the_pages_edge() {
     assert_ne!(cursor_at(&mut h, beside), egui::CursorIcon::PointingHand, "just off the page");
 }
 
-/// With Edit text a right-click on a paragraph is Edit text's, as before, though a comment lies
-/// over it: the comment is not selected. The page's menu is anchored there all the same (Paste on
-/// the picture menu, Delete page); it used to stay where the last right-click comments saw was.
+/// Edit mode permits selecting an overlapping comment through its context menu, so highlights
+/// can be deleted without leaving the workspace. The page menu remains anchored at that click.
 #[test]
-fn a_right_click_with_edit_text_on_a_paragraph_under_a_comment_selects_no_comment() {
+fn a_right_click_with_edit_text_on_a_paragraph_under_a_comment_selects_the_comment() {
     let mut h = open(comment_on_text_pdf(), "150", false);
     h.state_mut().quick_tool = QuickTool::EditText;
     h.run_steps(4);
     let on_text = at(&h, 100.0, 303.0);
     wait_for_cursor(&mut h, on_text, |c| c != egui::CursorIcon::Default);
     right_click(&mut h, on_text);
-    assert_eq!(h.state().views[0].comments.selected, None);
+    assert_eq!(h.state().views[0].comments.selected, Some((0, 0)));
     assert_eq!(h.state().views[0].comments.context_at.map(|(page, _)| page), Some(0), "the menu is anchored on the page");
 }
 

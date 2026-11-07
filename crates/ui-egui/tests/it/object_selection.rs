@@ -333,6 +333,9 @@ fn group_drag_respects_document_rotation_and_view_rotation() {
 fn group_drags_cancel_on_focus_loss_tab_switch_home_and_modal_dialogs() {
     for case in 0..5 {
         let mut h = harness();
+        // Keep the Edit workspace when another document opens. Switching to a different
+        // default workspace deliberately clears its editing selection and is a separate flow.
+        h.state_mut().set_option("default-mode", "edit").unwrap();
         let before = objects(&h);
         marquee(&mut h);
         let (a, b) = (at(&h, 55.0, 70.0), at(&h, 90.0, 110.0));
@@ -361,7 +364,7 @@ fn group_drags_cancel_on_focus_loss_tab_switch_home_and_modal_dialogs() {
         h.run_steps(4);
         assert_eq!(objects(&h), before, "cancelled gesture case {case}");
         assert!(!h.state().session.get(h.state().views[0].id).unwrap().dirty, "case {case}");
-        h.get_by_label("3 objects selected");
+        assert!(h.query_by_label("3 objects selected").is_some(), "selection remains after case {case}");
     }
 }
 
