@@ -252,9 +252,7 @@ mod tests {
         struct Rows(Vec<Vec<bool>>, Vec<bool>, usize);
         impl hayro_ccitt::Decoder for Rows {
             fn push_row(&mut self, changes: &[u32]) {
-                let row = (0..self.2)
-                    .map(|x| changes.partition_point(|&c| c as usize <= x) % 2 == 0)
-                    .collect();
+                let row = (0..self.2).map(|x| changes.partition_point(|&c| c as usize <= x) % 2 == 0).collect();
                 self.0.push(row);
             }
         }
