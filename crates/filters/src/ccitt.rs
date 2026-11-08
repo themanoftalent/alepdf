@@ -98,9 +98,9 @@ fn decode_ccitt(data: &[u8], p: &CcittParams, max_rows: u32) -> Result<Vec<u8>, 
         encoding: match p.k {
             ..0 => hayro_ccitt::EncodingMode::Group4,
             0 => hayro_ccitt::EncodingMode::Group3_1D,
-            k => hayro_ccitt::EncodingMode::Group3_2D { k: u32::try_from(k).unwrap_or(u32::MAX) },
+            _ => hayro_ccitt::EncodingMode::Group3_2D,
         },
-        invert_black: false,
+        strict: false,
     };
     // u32 to usize: wasm32 and up have at least 32-bit usize.
     let mut out = Rows::new(columns as usize, rows as usize, p.black_is_1);
@@ -193,10 +193,16 @@ impl Rows {
 }
 
 impl hayro_ccitt::Decoder for Rows {
-    fn push_pixels(&mut self, white: bool, count: u32) {
-        self.push(white, count as usize);
-    }
-    fn next_line(&mut self) {
+    fn push_row(&mut self, changes: &[u32]) {
+        let mut start = 0usize;
+        let mut white = true;
+        for &change in changes {
+            let end = change as usize;
+            self.push(white, end.saturating_sub(start));
+            start = end;
+            white = !white;
+        }
+        self.push(white, self.columns.saturating_sub(start));
         self.end_row();
     }
 }
@@ -245,12 +251,8 @@ mod tests {
     pub(crate) fn decode(data: &[u8], columns: u32, rows: u32) -> Vec<Vec<bool>> {
         struct Rows(Vec<Vec<bool>>, Vec<bool>, usize);
         impl hayro_ccitt::Decoder for Rows {
-            fn push_pixels(&mut self, white: bool, count: u32) {
-                self.1.extend(std::iter::repeat_n(white, count as usize));
-            }
-            fn next_line(&mut self) {
-                let mut row = std::mem::take(&mut self.1);
-                row.truncate(self.2);
+            fn push_row(&mut self, changes: &[u32]) {
+                let row = (0..self.2).map(|x| changes.partition_point(|&c| c as usize <= x) % 2 == 0).collect();
                 self.0.push(row);
             }
         }
@@ -261,7 +263,7 @@ mod tests {
             end_of_line: false,
             rows_are_byte_aligned: false,
             encoding: hayro_ccitt::EncodingMode::Group4,
-            invert_black: false,
+            strict: false,
         };
         let mut out = Rows(Vec::new(), Vec::new(), columns as usize);
         hayro_ccitt::decode(data, &mut out, &mut hayro_ccitt::DecoderContext::new(settings)).unwrap();
