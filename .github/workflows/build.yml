@@ -143,7 +143,7 @@ jobs:
         run: |
           TAG_NAME="${GITHUB_REF_NAME:-v0.18.3}"
           if [[ "$TAG_NAME" == "main" ]]; then TAG_NAME="v0.18.3"; fi
-          FILES=$(find release-artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.zip" -o -name "*.exe" \))
+          mapfile -d '' -t FILES < <(find release-artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.zip" -o -name "*.exe" \) -print0)
           echo "Uploading files:"
-          echo "$FILES"
-          gh release upload "$TAG_NAME" $FILES --clobber || gh release create "$TAG_NAME" $FILES --title "AlePdf $TAG_NAME" --generate-notes
+          printf '%s\n' "${FILES[@]}"
+          gh release upload "$TAG_NAME" "${FILES[@]}" --clobber || gh release create "$TAG_NAME" "${FILES[@]}" --title "AlePdf $TAG_NAME" --generate-notes
