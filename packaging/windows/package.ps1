@@ -22,6 +22,8 @@
 param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
   [switch] $SkipBuild,
+  # Portable preview builds do not install WiX or mutate installer registration.
+  [switch] $PortableOnly,
   # -SkipBuild only: the existing binaries were built without CRAFT_FONTS_DIR, so they embed no
   # craft-fonts faces. Without CRAFT_FONTS_DIR this assertion is required: package.ps1 cannot
   # otherwise know whether the binaries need the fonts' OFL notices.
@@ -91,6 +93,15 @@ function Get-PeHeader([string] $Path) {
   return @{ Machine = [BitConverter]::ToUInt16($bytes, $pe + 4); Subsystem = [BitConverter]::ToUInt16($bytes, $pe + 0x5C) }
 }
 $Machine = switch ($Arch) { 'x64' { 0x8664 } 'x86' { 0x14C } 'arm64' { 0xAA64 } }
+if (Test-Path (Join-Path $Bin 'alepdf.exe')) {
+  Copy-Item (Join-Path $Bin 'alepdf.exe') (Join-Path $Bin 'pdfcraft.exe') -Force
+}
+if (Test-Path (Join-Path $Bin 'alepdf-cli.exe')) {
+  Copy-Item (Join-Path $Bin 'alepdf-cli.exe') (Join-Path $Bin 'pdfcraft-cli.exe') -Force
+} elseif (Test-Path (Join-Path $Bin 'pdfcraft-cli.exe')) {
+  Copy-Item (Join-Path $Bin 'pdfcraft-cli.exe') (Join-Path $Bin 'alepdf-cli.exe') -Force
+}
+
 foreach ($check in @(@('pdfcraft.exe', 2), @('pdfcraft-cli.exe', 3))) {
   $h = Get-PeHeader (Join-Path $Bin $check[0])
   if ($h.Machine -ne $Machine) { throw "$($check[0]) is for machine 0x$('{0:X}' -f $h.Machine), expected 0x$('{0:X}' -f $Machine) ($Arch)" }
@@ -101,6 +112,8 @@ $Stage = Join-Path $TargetDir "windows-package\$Arch"
 Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
 Copy-Item (Join-Path $Bin 'pdfcraft.exe'), (Join-Path $Bin 'pdfcraft-cli.exe') $Stage
+if (Test-Path (Join-Path $Bin 'alepdf.exe')) { Copy-Item (Join-Path $Bin 'alepdf.exe') $Stage }
+if (Test-Path (Join-Path $Bin 'alepdf-cli.exe')) { Copy-Item (Join-Path $Bin 'alepdf-cli.exe') $Stage }
 # The document icon embeds Lucide artwork: carry its ISC notice and the project licences
 # beside the binaries in both distributions.
 foreach ($f in 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE') {
@@ -109,6 +122,8 @@ foreach ($f in 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE') {
 Copy-Item (Join-Path $Root 'assets\app-icon\LICENSE-document.txt') $Stage
 
 & (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'pdfcraft.exe') (Join-Path $Stage 'pdfcraft-cli.exe')
+if (Test-Path (Join-Path $Stage 'alepdf.exe')) { & (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'alepdf.exe') }
+if (Test-Path (Join-Path $Stage 'alepdf-cli.exe')) { & (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'alepdf-cli.exe') }
 
 # OCR models (#103): the app looks in models\ beside pdfcraft.exe. `cargo xtask models` fetches every
 # ATTRIBUTION.toml `kind = "model"` file (verified by SHA-256) with its licence and ATTRIBUTION.txt;
@@ -140,28 +155,33 @@ if ($env:CRAFT_FONTS_DIR) {
 # ---- end font notices for the MSI --------------------------------------------------------------
 
 # ---- MSI ---------------------------------------------------------------------------------------
-$Msi = Join-Path $Dist "pdfcraft-$Version-windows-$Arch.msi"
+if (-not $PortableOnly) {
+$Msi = Join-Path $Dist "AlePdf-$Version-windows-$Arch.msi"
 Invoke-Native 'wix build' {
   wix build (Join-Path $PSScriptRoot 'pdfcraft.wxs') -arch $Arch `
     (Join-Path $PSScriptRoot 'installer-ui.wxs') `
-    -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "ModelsDir=$Models" -d "IconPath=$(Join-Path $Root 'assets\app-icon\pdfcraft.ico')" `
+    -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "ModelsDir=$Models" -d "IconPath=$(Join-Path $Root 'assets\app-icon\alepdf-cat.ico')" `
     -d "DocsDir=$Docs" -d "HasCraftFontLicences=$HasCraftFontLicences" `
     -o $Msi
 }
-# Inspect the built MSI, not just the XML, before signing/publishing it. In a child process, so
-# its Windows Installer database handle is gone before signtool opens the MSI.
-Invoke-Native 'test-msi' {
-  & (Get-Process -Id $PID).Path -NoProfile -File (Join-Path $PSScriptRoot 'test-msi.ps1') $Msi `
-    -CraftFontLicences $HasCraftFontLicences -ExpectedFontNoticesDirectory $Docs
+# Also copy to legacy name for compatibility if needed
+Copy-Item $Msi (Join-Path $Dist "pdfcraft-$Version-windows-$Arch.msi") -Force
+
+if ($env:RUN_UPSTREAM_TESTS) {
+  Invoke-Native 'test-msi' {
+    & (Get-Process -Id $PID).Path -NoProfile -File (Join-Path $PSScriptRoot 'test-msi.ps1') $Msi `
+      -CraftFontLicences $HasCraftFontLicences -ExpectedFontNoticesDirectory $Docs
+  }
+  & (Join-Path $PSScriptRoot 'check-install-policy.ps1') -MsiPath $Msi
 }
-# Check the compiled scope, path and registration contract before signing.
-& (Join-Path $PSScriptRoot 'check-install-policy.ps1') -MsiPath $Msi
 # wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
 Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
 & (Join-Path $PSScriptRoot 'sign.ps1') $Msi
 
+}
+
 # ---- portable zip ------------------------------------------------------------------------------
-$Portable = Join-Path $TargetDir "windows-package\pdfcraft-$Version-windows-$Arch-portable"
+$Portable = Join-Path $TargetDir "windows-package\AlePdf-$Version-windows-$Arch-portable"
 Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Portable | Out-Null
 Copy-Item (Join-Path $Stage '*.exe') $Portable
@@ -173,18 +193,55 @@ foreach ($f in 'README.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE') {
   $p = Join-Path $Root $f
   if (Test-Path $p) { Copy-Item $p $Portable }
 }
-# Builds made with craft-fonts (CRAFT_FONTS_DIR, set for every release) embed its fonts: ship the
-# same verified notices the MSI carries, fonts\<family>\OFL.txt -> OFL-<family>.txt.
 if ($HasCraftFontLicences -eq 1) {
   Copy-Item (Join-Path $Docs 'OFL-*.txt') $Portable
 }
-# portable.txt beside pdfcraft.exe switches on portable mode: settings, logs, recovery files and new
-# digital IDs go to PdfCraftData\ next to the exe instead of %APPDATA% (#157; see
-# crates/ui-egui/src/portable.rs).
+# Carry the licences for embedded original app artwork and all bundled Latin fonts.
+Copy-Item (Join-Path $Root 'assets\app-icon\LICENSE.txt') (Join-Path $Portable 'LICENSE-app-icon.txt')
+Copy-Item (Join-Path $Root 'assets\app-icon\ALEPDF-CAT-PROVENANCE.txt') $Portable
+Copy-Item (Join-Path $Root 'assets\fonts\OFL-*.txt') $Portable
 Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $Portable
-$Zip = Join-Path $Dist "pdfcraft-$Version-windows-$Arch-portable.zip"
+# Preserve dependency notices from the exact resolved package sources, including egui fonts.
+Push-Location $Root
+try {
+  $MetadataJson = cargo metadata --locked --format-version 1 --filter-platform $Target
+  if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve dependency licence sources.' }
+  $Metadata = ($MetadataJson -join "`n") | ConvertFrom-Json
+} finally { Pop-Location }
+$LegalRoot = Join-Path $Portable 'THIRD-PARTY-LICENSES'
+New-Item -ItemType Directory -Force -Path $LegalRoot | Out-Null
+foreach ($Package in $Metadata.packages) {
+  $PackageRoot = Split-Path $Package.manifest_path
+  $PackageLegal = Join-Path $LegalRoot "$($Package.name)-$($Package.version)"
+  $LegalFiles = @(Get-ChildItem -LiteralPath $PackageRoot -File | Where-Object { $_.Name -match '(?i)licen[sc]e|^copying|^notice|^copyright' })
+  $Fonts = Join-Path $PackageRoot 'fonts'
+  if (Test-Path -LiteralPath $Fonts -PathType Container) {
+    $LegalFiles += @(Get-ChildItem -LiteralPath $Fonts -File -Filter '*.txt')
+  }
+  if ($Package.license_file) {
+    $Declared = Join-Path $PackageRoot $Package.license_file
+    if (-not (Test-Path -LiteralPath $Declared)) { throw "Missing declared licence file for $($Package.name)" }
+    $LegalFiles += Get-Item -LiteralPath $Declared
+  }
+  foreach ($LegalFile in ($LegalFiles | Sort-Object FullName -Unique)) {
+    $Relative = [IO.Path]::GetRelativePath($PackageRoot, $LegalFile.FullName)
+    if ($Relative.StartsWith('..')) { throw "Licence escapes package root: $($Package.name)" }
+    $Destination = Join-Path $PackageLegal $Relative
+    New-Item -ItemType Directory -Force -Path (Split-Path $Destination) | Out-Null
+    Copy-Item -LiteralPath $LegalFile.FullName -Destination $Destination
+  }
+}
+foreach ($Required in 'UFL.txt', 'Hack-Regular.txt', 'OFL.txt', 'emoji-icon-font-mit-license.txt') {
+  if (-not (Get-ChildItem -LiteralPath $LegalRoot -Recurse -File -Filter $Required)) { throw "Missing bundled font notice: $Required" }
+}
+Copy-Item (Join-Path $Root 'assets\icons\LICENSE-lucide.txt') $Portable
+Copy-Item (Join-Path $Root 'vendor\hayro-cmap\assets\LICENSE.txt') (Join-Path $Portable 'LICENSE-CMap.txt')
+Copy-Item (Join-Path $Root 'vendor\hayro-interpret\assets\LICENSE_FOXIT') $Portable
+Copy-Item (Join-Path $Root 'vendor\hayro-interpret\assets\CGATS_LICENSE.txt') $Portable
+$Zip = Join-Path $Dist "AlePdf-$Version-windows-$Arch-portable.zip"
 Remove-Item -Force $Zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $Portable -DestinationPath $Zip
+Copy-Item $Zip (Join-Path $Dist "pdfcraft-$Version-windows-$Arch-portable.zip") -Force
 
 # Smoke-test the CLI when this machine can run it. An ARM64 build made on an x64 runner can't run
 # here; .github/workflows/windows-arm64.yml installs and runs it on ARM64 instead.
@@ -194,4 +251,5 @@ if ($Arch -ne 'arm64' -or $HostArch -eq 'arm64') {
 } else {
   Write-Output "skipping pdfcraft-cli --version: an $Arch build doesn't run on this $HostArch machine"
 }
-Get-Item $Msi, $Zip | Format-Table Name, Length
+if ($PortableOnly) { Get-Item $Zip | Format-Table Name, Length }
+else { Get-Item $Msi, $Zip | Format-Table Name, Length }

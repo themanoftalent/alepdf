@@ -45,7 +45,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: AlePdf-Universal-DMG
-          path: dist/release/AlePdf.dmg
+          path: dist/release/AlePdf*.dmg
           if-no-files-found: error
 
       - name: Upload AlePdf CLI (macOS)
@@ -63,7 +63,7 @@ jobs:
           if-no-files-found: error
 
   build-windows:
-    name: Build Windows x64 MSI & Portable ZIP
+    name: Build Windows x64 MSI, EXE & Portable ZIP
     runs-on: windows-latest
     steps:
       - name: Checkout code
@@ -86,12 +86,35 @@ jobs:
         run: |
           pwsh packaging/windows/package.ps1 -Arch x64
 
+      - name: Compile Inno Setup Installer (AlePdf-Setup-x64.exe)
+        shell: pwsh
+        run: |
+          $Compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (Test-Path -LiteralPath $Compiler) {
+            $Payload = @(Get-ChildItem target/windows-package -Directory -Filter '*portable')
+            if ($Payload.Count -ge 1) {
+              $Version = "0.18.3"
+              $Release = (Resolve-Path dist/release).Path
+              & $Compiler "/DPayloadDir=$($Payload[0].FullName)" "/DReleaseDir=$Release" "/DAppVersion=$Version" packaging/windows/preview-setup.iss
+              if (Test-Path "dist/release/AlePdf-$Version-windows-x64-setup.exe") {
+                Copy-Item "dist/release/AlePdf-$Version-windows-x64-setup.exe" "dist/release/AlePdf-Setup-x64.exe" -Force
+              }
+            }
+          }
+
       - name: Upload Windows MSI Installer
         uses: actions/upload-artifact@v7
         with:
           name: AlePdf-Windows-x64-MSI
           path: dist/release/*windows-x64.msi
           if-no-files-found: error
+
+      - name: Upload Windows EXE Installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: AlePdf-Windows-x64-EXE
+          path: dist/release/*windows-x64-setup.exe
+          if-no-files-found: ignore
 
       - name: Upload Windows Portable ZIP
         uses: actions/upload-artifact@v7
@@ -118,9 +141,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="${GITHUB_REF_NAME:-v0.15.0}"
-          if [[ "$TAG_NAME" == "main" ]]; then TAG_NAME="v0.15.0"; fi
-          FILES=$(find release-artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.zip" \))
+          TAG_NAME="${GITHUB_REF_NAME:-v0.18.3}"
+          if [[ "$TAG_NAME" == "main" ]]; then TAG_NAME="v0.18.3"; fi
+          FILES=$(find release-artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.zip" -o -name "*.exe" \))
           echo "Uploading files:"
           echo "$FILES"
           gh release upload "$TAG_NAME" $FILES --clobber || gh release create "$TAG_NAME" $FILES --title "AlePdf $TAG_NAME" --generate-notes
