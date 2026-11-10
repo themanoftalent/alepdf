@@ -1,4 +1,4 @@
-# AlePdf roadmap
+# PdfAle roadmap
 
 > **Last reviewed:** 2026-11-03 | **Last updated:** 2026-11-03 | **Change:** patch (M5 #5850 review: indirect typewriter intent and composer edits preserve outer whitespace; movement regression commits by outside click; estimates unchanged)
 
@@ -93,9 +93,9 @@
 > **Last reviewed:** 2026-10-18 - **Last updated:** 2026-10-18 - **Change:** minor (M4 #3309: bounded iterative named-destination pruning on page deletion; estimates unchanged)
 > **Last reviewed:** 2026-10-18 - **Last updated:** 2026-10-18 - **Change:** minor (M1 #2658: macOS atomic saves retain destination extended attributes, including Finder tags, and reject partial resource-fork reads after size changes. Metadata failures retain the original PDF and unsaved edit. Estimates unchanged)
 
-AlePdf's one-page summary: how close it is to Adobe Acrobat Pro's offline feature set, and what
+PdfAle's one-page summary: how close it is to Adobe Acrobat Pro's offline feature set, and what
 comes next. Adobe's cloud services (Document Cloud, Acrobat Sign requests, shared review, the AI
-Assistant) are out of scope; AlePdf's alternatives are local-first plus opt-in providers.
+Assistant) are out of scope; PdfAle's alternatives are local-first plus opt-in providers.
 
 | Document | Holds |
 |---|---|
@@ -107,7 +107,7 @@ Assistant) are out of scope; AlePdf's alternatives are local-first plus opt-in p
 | [docs/ui-parity.md](docs/ui-parity.md) | Tools, handles, shortcuts, panels, preferences |
 | [docs/hardware-parity.md](docs/hardware-parity.md) | GPU, printers, scanners, smart cards, pen, platforms |
 | [docs/localization-parity.md](docs/localization-parity.md) | Per-language status |
-| [docs/architecture.md](docs/architecture.md) | How AlePdf is built |
+| [docs/architecture.md](docs/architecture.md) | How PdfAle is built |
 | `parity/acrobat-features.toml` | The machine-checked checklist (`cargo xtask parity`) |
 
 **Keep it current:** every session, update the milestone row in [docs/roadmap.md](docs/roadmap.md)

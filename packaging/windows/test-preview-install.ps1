@@ -6,9 +6,11 @@ $Process = $null
 try {
   $Install = Start-Process -FilePath $Setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$Folder`"") -Wait -PassThru
   if ($Install.ExitCode -ne 0) { throw "Installer exit $($Install.ExitCode)" }
-  & (Join-Path $Folder 'alepdf-cli.exe') --version
+  $Exe = if (Test-Path -LiteralPath (Join-Path $Folder 'pdfale.exe')) { Join-Path $Folder 'pdfale.exe' } else { Join-Path $Folder 'alepdf.exe' }
+  $Cli = if (Test-Path -LiteralPath (Join-Path $Folder 'pdfale-cli.exe')) { Join-Path $Folder 'pdfale-cli.exe' } else { Join-Path $Folder 'alepdf-cli.exe' }
+  & $Cli --version
   if ($LASTEXITCODE -ne 0) { throw 'Installed CLI failed.' }
-  $Process = Start-Process -FilePath (Join-Path $Folder 'alepdf.exe') -PassThru
+  $Process = Start-Process -FilePath $Exe -PassThru
   Start-Sleep -Seconds 8
   $Process.Refresh()
   if ($Process.HasExited) { throw "GUI exited during startup: $($Process.ExitCode)" }
@@ -23,7 +25,7 @@ try {
   if (Test-Path -LiteralPath $Uninstall) {
     $Remove = Start-Process -FilePath $Uninstall -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
     if ($Remove.ExitCode -ne 0) { throw "Uninstaller exit $($Remove.ExitCode)" }
-    if (Test-Path -LiteralPath (Join-Path $Folder 'alepdf.exe')) { throw 'Uninstall left app executable behind.' }
+    if ((Test-Path -LiteralPath (Join-Path $Folder 'pdfale.exe')) -or (Test-Path -LiteralPath (Join-Path $Folder 'alepdf.exe'))) { throw 'Uninstall left app executable behind.' }
     Write-Output 'Preview uninstall passed.'
   }
 }

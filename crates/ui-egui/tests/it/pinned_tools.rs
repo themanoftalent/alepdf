@@ -190,7 +190,7 @@ fn sidebar_pin_toggle_unpins_and_pins() {
 
 #[test]
 fn clicking_edit_a_pdf_on_home_opens_picker_and_enters_edit_mode() {
-    let dir = std::env::temp_dir().join(format!("alepdf-home-edit-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("pdfale-home-edit-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("test.pdf");
     std::fs::write(&path, fixture(2)).unwrap();

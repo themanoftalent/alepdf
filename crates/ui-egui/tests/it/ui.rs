@@ -36,7 +36,7 @@ fn harness(setup: impl FnOnce(&mut PdfCraftApp) + 'static) -> Harness<'static, P
 #[test]
 fn home_shows_welcome_and_tools() {
     let h = harness(|_| {});
-    h.get_by_label_contains("Welcome to AlePdf");
+    h.get_by_label_contains("Welcome to PdfAle");
     assert!(h.query_all_by_label("Organize pages").count() >= 2, "tool list + home card");
     h.get_by_label("Open file");
 }
@@ -113,7 +113,7 @@ fn home_removes_one_recent_file_or_clears_them_all() {
     h.get_by_label("Clear Recent Files").click();
     h.run_steps(2);
     assert!(h.state().recent.is_empty(), "Clear empties the list");
-    h.get_by_label_contains("Files you open in AlePdf appear here");
+    h.get_by_label_contains("Files you open in PdfAle appear here");
     assert!(h.query_by_label("Clear Recent Files").is_none(), "and goes away with nothing left to clear");
 }
 
@@ -240,7 +240,7 @@ fn another_tab_coming_forward_puts_the_expanded_all_tools_away() {
     h.state_mut().set_option("home", "").unwrap();
     h.run_steps(3);
     assert!(!h.state().all_tools_full);
-    h.get_by_label_contains("Welcome to AlePdf");
+    h.get_by_label_contains("Welcome to PdfAle");
     // Another document's tab.
     let mut h = harness(|app| {
         app.open_bytes("one.pdf", None, FIXTURE.to_vec()).expect("fixture opens");
@@ -260,7 +260,7 @@ fn going_home_with_no_document_puts_the_expanded_all_tools_away() {
     h.state_mut().set_option("home", "").unwrap();
     h.run_steps(3);
     assert!(!h.state().all_tools_full);
-    h.get_by_label_contains("Welcome to AlePdf");
+    h.get_by_label_contains("Welcome to PdfAle");
 }
 
 #[test]
@@ -664,7 +664,7 @@ fn tabs_shrink_to_fit_then_arrows_step_through_them_and_open_stays_in_sight() {
         }
     });
     let open = h.get_by_label("Open").rect();
-    let website = h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("AlePdf")).rect();
+    let website = h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("PdfAle")).rect();
     assert!(open.right() <= website.left(), "Open {open:?} must not run under the website button {website:?}");
     let mut previous_right = f32::MIN;
     for i in 0..5 {
@@ -691,7 +691,7 @@ fn tabs_shrink_to_fit_then_arrows_step_through_them_and_open_stays_in_sight() {
     let right = h.get_by_label("Scroll tabs right").rect();
     assert!(
         right.right() <= open.left() + 0.5
-            && open.right() <= h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("AlePdf")).rect().left()
+            && open.right() <= h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("PdfAle")).rect().left()
     );
     // Twenty: Open stays in sight left of the website button.
     for i in 0..13 {
@@ -699,7 +699,7 @@ fn tabs_shrink_to_fit_then_arrows_step_through_them_and_open_stays_in_sight() {
     }
     h.run_steps(4);
     let open = h.get_by_label("Open").rect();
-    let website = h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("AlePdf")).rect();
+    let website = h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("PdfAle")).rect();
     assert!(open.left() > 0.0 && open.right() <= website.left(), "Open {open:?} stays in sight left of the website button {website:?}");
 }
 
@@ -713,8 +713,8 @@ fn the_integrated_title_bar_is_the_traffic_light_band() {
         app.open_bytes("band.pdf", None, FIXTURE.to_vec()).unwrap();
     });
     let band = 28.0;
-    for label in ["Home", "band.pdf", "Open", "AlePdf", "Keyboard shortcuts"] {
-        let r = if label == "AlePdf" {
+    for label in ["Home", "band.pdf", "Open", "PdfAle", "Keyboard shortcuts"] {
+        let r = if label == "PdfAle" {
             h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some(label)).rect()
         } else {
             h.get_by_label(label).rect()
@@ -1433,7 +1433,7 @@ fn closing_the_last_active_tab_selects_the_previous_one_then_home() {
         assert!(app.session.get(ids[removed]).is_none());
     }
     assert_eq!(h.state().active, None);
-    h.get_by_label_contains("Welcome to AlePdf");
+    h.get_by_label_contains("Welcome to PdfAle");
 }
 
 #[test]

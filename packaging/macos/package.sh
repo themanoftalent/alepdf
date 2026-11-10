@@ -39,9 +39,9 @@ export MACOSX_DEPLOYMENT_TARGET=11.0
 IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 SHORT_VERSION="${VERSION%%-*}"
 WORK="$CARGO_TARGET_DIR/macos-package"
-APP="$WORK/AlePdf.app"
-DMG="$DIST/AlePdf-$VERSION-macos-$ARCH.dmg"
-CLI_ZIP="$DIST/alepdf-cli-$VERSION-macos-$ARCH.zip"
+APP="$WORK/PdfAle.app"
+DMG="$DIST/PdfAle-$VERSION-macos-$ARCH.dmg"
+CLI_ZIP="$DIST/pdfale-cli-$VERSION-macos-$ARCH.zip"
 
 NOTARIZE=0
 if [[ "$IDENTITY" = "-" ]]; then
@@ -112,15 +112,15 @@ notarize() {
   fi
 }
 
-# ---- AlePdf.app ----------------------------------------------------------------------------
+# ---- PdfAle.app ----------------------------------------------------------------------------
 echo "==> assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # Executable and icon carry the display name (CFBundleExecutable / CFBundleIconFile).
-cp "$WORK/bin/pdfcraft" "$APP/Contents/MacOS/AlePdf"
-cp "$ROOT/assets/app-icon/pdfcraft.icns" "$APP/Contents/Resources/AlePdf.icns"
+cp "$WORK/bin/pdfcraft" "$APP/Contents/MacOS/PdfAle"
+cp "$ROOT/assets/app-icon/pdfcraft.icns" "$APP/Contents/Resources/PdfAle.icns"
 # Required embedded-font notices are independent of optional font inputs.
 cp "$ROOT/NOTICE" "$APP/Contents/Resources/NOTICE"
-# The standard About panel (AlePdf menu > About AlePdf) shows Credits.rtf under the version.
+# The standard About panel (PdfAle menu > About PdfAle) shows Credits.rtf under the version.
 cp "$HERE/Credits.rtf" "$APP/Contents/Resources/Credits.rtf"
 copy_font_licences "$APP/Contents/Resources"
 # OCR models: the app finds them at Contents/MacOS/../Resources/models. Before signing, so the
@@ -134,13 +134,13 @@ printf 'APPL????' >"$APP/Contents/PkgInfo"
 
 # Sign inside-out: nested code first, then the bundle itself (no --deep on the final signature).
 # Today the only nested code is the main executable; frameworks/helpers would be signed here too.
-sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/AlePdf"
+sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP/Contents/MacOS/PdfAle"
 sign --options runtime --entitlements "$HERE/entitlements.plist" "$APP"
 codesign --verify --strict --deep --verbose=2 "$APP"
 
 if [[ "$NOTARIZE" = 1 ]]; then
-  ditto -c -k --keepParent "$APP" "$WORK/AlePdf-notarize.zip"
-  notarize "$WORK/AlePdf-notarize.zip"
+  ditto -c -k --keepParent "$APP" "$WORK/PdfAle-notarize.zip"
+  notarize "$WORK/PdfAle-notarize.zip"
   stapler_retry staple "$APP"
   stapler_retry validate "$APP"
   spctl --assess --type execute -vvv "$APP"
@@ -150,7 +150,7 @@ fi
 echo "==> building $DMG"
 STAGE="$WORK/dmg"
 mkdir -p "$STAGE"
-ditto "$APP" "$STAGE/AlePdf.app"
+ditto "$APP" "$STAGE/PdfAle.app"
 ln -s /Applications "$STAGE/Applications"
 # Finder window layout: background, icon size and positions (packaging/macos/dmg/README.md).
 mkdir -p "$STAGE/.background"
@@ -170,7 +170,7 @@ hdiutil_retry() {
     sleep $((attempt * 10))
   done
 }
-hdiutil_retry create create -srcfolder "$STAGE" -volname "AlePdf" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$DMG"
+hdiutil_retry create create -srcfolder "$STAGE" -volname "PdfAle" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$DMG"
 sign "$DMG"
 codesign --verify --strict --verbose=2 "$DMG"
 # The app inside the image must still pass --strict, so a makehybrid-style regression can't ship.
@@ -178,7 +178,7 @@ MOUNT="$WORK/dmg-check"
 rm -rf "$MOUNT"
 mkdir -p "$MOUNT"
 hdiutil_retry attach attach -nobrowse -readonly -mountpoint "$MOUNT" "$DMG" >/dev/null
-if ! codesign --verify --strict --deep --verbose=2 "$MOUNT/AlePdf.app"; then
+if ! codesign --verify --strict --deep --verbose=2 "$MOUNT/PdfAle.app"; then
   hdiutil_retry detach detach "$MOUNT" >/dev/null || true
   exit 1
 fi

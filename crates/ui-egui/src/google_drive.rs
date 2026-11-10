@@ -45,18 +45,23 @@ pub fn detect_google_drive_root() -> Option<PathBuf> {
     None
 }
 
-/// Returns the dedicated "AlePdf" folder inside Google Drive, creating it if needed.
+/// Returns the dedicated "PdfAle" folder inside Google Drive, preserving existing "AlePdf" folders if present.
 pub fn get_or_create_alepdf_drive_folder() -> Result<PathBuf, String> {
     let root = detect_google_drive_root()
         .ok_or_else(|| "Google Drive folder was not found in ~/Library/CloudStorage. Please make sure Google Drive is running.".to_string())?;
 
-    let alepdf_dir = root.join("AlePdf");
-    if !alepdf_dir.exists() {
-        if let Err(e) = std::fs::create_dir_all(&alepdf_dir) {
-            return Err(format!("Could not create AlePdf folder in Google Drive: {e}"));
-        }
+    let pdfale_dir = root.join("PdfAle");
+    let legacy_dir = root.join("AlePdf");
+    if pdfale_dir.exists() {
+        return Ok(pdfale_dir);
     }
-    Ok(alepdf_dir)
+    if legacy_dir.exists() {
+        return Ok(legacy_dir);
+    }
+    if let Err(e) = std::fs::create_dir_all(&pdfale_dir) {
+        return Err(format!("Could not create PdfAle folder in Google Drive: {e}"));
+    }
+    Ok(pdfale_dir)
 }
 
 /// Checks if a file path is located inside Google Drive.
@@ -114,7 +119,7 @@ impl PdfCraftApp {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     if self.save_doc_to(id, &dest_str, SaveTarget::As) {
-                        self.notify(format!("☁ Saved to Google Drive (AlePdf/{filename}) — Cloud sync is active"));
+                        self.notify(format!("☁ Saved to Google Drive (PdfAle/{filename}) — Cloud sync is active"));
                     }
                 }
                 #[cfg(target_arch = "wasm32")]
@@ -128,7 +133,7 @@ impl PdfCraftApp {
         }
     }
 
-    /// Reveal the current document or AlePdf folder in macOS Finder.
+    /// Reveal the current document or PdfAle folder in macOS Finder.
     pub fn reveal_active_in_google_drive(&mut self) {
         let path_to_open = if let Some(active) = self.active
             && let Some(view) = self.views.get(active)

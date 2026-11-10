@@ -5,24 +5,24 @@
   <id>ai.storyteller.pdfcraft</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT OR Apache-2.0</project_license>
-  <name>AlePdf</name>
+  <name>PdfAle</name>
   <summary>Read, edit, organize, combine, split and secure PDFs</summary>
   <developer id="com.themanoftalent">
     <name>TheManOfTalent</name>
   </developer>
   <description>
     <p>
-      AlePdf is a modern, fast, private PDF editor and workbench built in pure Rust.
+      PdfAle is a modern, fast, private PDF editor and workbench built in pure Rust.
       Read, comment on, edit text and images, fill and sign forms, organize pages, and protect documents.
     </p>
   </description>
   <launchable type="desktop-id">ai.storyteller.pdfcraft.desktop</launchable>
   <icon type="stock">ai.storyteller.pdfcraft</icon>
   <!-- Only url types known to appstream 0.15 (Ubuntu 22.04, where CI validates): no vcs-browser. -->
-  <url type="homepage">https://alepdf-website.vercel.app/</url>
-  <url type="bugtracker">https://github.com/themanoftalent/alepdf/issues</url>
-  <url type="help">https://alepdf-website.vercel.app/</url>
-  <url type="contact">https://alepdf-website.vercel.app/</url>
+  <url type="homepage">https://macosuygulama.vercel.app/</url>
+  <url type="bugtracker">https://github.com/themanoftalent/pdfale/issues</url>
+  <url type="help">https://macosuygulama.vercel.app/</url>
+  <url type="contact">https://macosuygulama.vercel.app/</url>
   <categories>
     <category>Office</category>
     <category>Viewer</category>

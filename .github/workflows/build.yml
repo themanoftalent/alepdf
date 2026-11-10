@@ -41,25 +41,25 @@ jobs:
           chmod +x packaging/macos/package.sh packaging/env.sh
           ./packaging/macos/package.sh --arch universal
 
-      - name: Upload AlePdf DMG
+      - name: Upload PdfAle DMG
         uses: actions/upload-artifact@v7
         with:
-          name: AlePdf-Universal-DMG
-          path: dist/release/AlePdf*.dmg
+          name: PdfAle-Universal-DMG
+          path: dist/release/*dmg
           if-no-files-found: error
 
-      - name: Upload AlePdf CLI (macOS)
+      - name: Upload PdfAle CLI (macOS)
         uses: actions/upload-artifact@v7
         with:
-          name: AlePdf-CLI-macOS
-          path: dist/release/alepdf-cli-*-macos-*.zip
+          name: PdfAle-CLI-macOS
+          path: dist/release/*-macos-*.zip
           if-no-files-found: error
 
-      - name: Upload AlePdf App Bundle
+      - name: Upload PdfAle App Bundle
         uses: actions/upload-artifact@v7
         with:
-          name: AlePdf-App-Bundle
-          path: target/macos-package/AlePdf.app
+          name: PdfAle-App-Bundle
+          path: target/macos-package/*Ale.app
           if-no-files-found: error
 
   build-windows:
@@ -86,7 +86,7 @@ jobs:
         run: |
           pwsh packaging/windows/package.ps1 -Arch x64
 
-      - name: Compile Inno Setup Installer (AlePdf-Setup-x64.exe)
+      - name: Compile Inno Setup Installer (PdfAle-Setup-x64.exe)
         shell: pwsh
         run: |
           $Compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
@@ -96,7 +96,11 @@ jobs:
               $Version = "0.18.3"
               $Release = (Resolve-Path dist/release).Path
               & $Compiler "/DPayloadDir=$($Payload[0].FullName)" "/DReleaseDir=$Release" "/DAppVersion=$Version" packaging/windows/preview-setup.iss
-              if (Test-Path "dist/release/AlePdf-$Version-windows-x64-setup.exe") {
+              if (Test-Path "dist/release/PdfAle-$Version-windows-x64-setup.exe") {
+                Copy-Item "dist/release/PdfAle-$Version-windows-x64-setup.exe" "dist/release/PdfAle-Setup-x64.exe" -Force
+                Copy-Item "dist/release/PdfAle-$Version-windows-x64-setup.exe" "dist/release/AlePdf-Setup-x64.exe" -Force
+              } elseif (Test-Path "dist/release/AlePdf-$Version-windows-x64-setup.exe") {
+                Copy-Item "dist/release/AlePdf-$Version-windows-x64-setup.exe" "dist/release/PdfAle-Setup-x64.exe" -Force
                 Copy-Item "dist/release/AlePdf-$Version-windows-x64-setup.exe" "dist/release/AlePdf-Setup-x64.exe" -Force
               }
             }
@@ -105,21 +109,21 @@ jobs:
       - name: Upload Windows MSI Installer
         uses: actions/upload-artifact@v7
         with:
-          name: AlePdf-Windows-x64-MSI
+          name: PdfAle-Windows-x64-MSI
           path: dist/release/*windows-x64.msi
           if-no-files-found: error
 
       - name: Upload Windows EXE Installer
         uses: actions/upload-artifact@v7
         with:
-          name: AlePdf-Windows-x64-EXE
+          name: PdfAle-Windows-x64-EXE
           path: dist/release/*windows-x64-setup.exe
           if-no-files-found: ignore
 
       - name: Upload Windows Portable ZIP
         uses: actions/upload-artifact@v7
         with:
-          name: AlePdf-Windows-x64-Portable
+          name: PdfAle-Windows-x64-Portable
           path: dist/release/*windows-x64-portable.zip
           if-no-files-found: error
 
@@ -146,4 +150,4 @@ jobs:
           mapfile -d '' -t FILES < <(find release-artifacts -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*.zip" -o -name "*.exe" \) -print0)
           echo "Uploading files:"
           printf '%s\n' "${FILES[@]}"
-          gh release upload "$TAG_NAME" "${FILES[@]}" --clobber || gh release create "$TAG_NAME" "${FILES[@]}" --title "AlePdf $TAG_NAME" --generate-notes
+          gh release upload "$TAG_NAME" "${FILES[@]}" --clobber || gh release create "$TAG_NAME" "${FILES[@]}" --title "PdfAle $TAG_NAME" --generate-notes

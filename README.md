@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/app-icon/pdfcraft-1024.png" width="128" height="128" alt="AlePdf Icon">
+  <img src="assets/app-icon/pdfcraft-1024.png" width="128" height="128" alt="PdfAle Icon">
 </p>
 
-<h1 align="center">AlePdf</h1>
+<h1 align="center">PdfAle</h1>
 
 <p align="center">
   <b>The modern, fast, private PDF editor and workbench built in pure Rust.</b><br>
@@ -11,25 +11,25 @@
 </p>
 
 <p align="center">
-  <a href="https://alepdf-website.vercel.app/"><img alt="Official Website" src="https://img.shields.io/badge/website-alepdf--website.vercel.app-007acc?style=flat-square&logo=vercel"></a>
-  <a href="https://github.com/themanoftalent/alepdf/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/themanoftalent/alepdf?style=flat-square&color=008080"></a>
+  <a href="https://macosuygulama.vercel.app/"><img alt="Official Website" src="https://img.shields.io/badge/website-macosuygulama.vercel.app-007acc?style=flat-square&logo=vercel"></a>
+  <a href="https://github.com/themanoftalent/pdfale/releases"><img alt="Latest Release" src="https://img.shields.io/github/v/release/themanoftalent/pdfale?style=flat-square&color=008080"></a>
   <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-b70228?style=flat-square">
   <img alt="Written in Rust" src="https://img.shields.io/badge/written%20in-Rust-8a011e?style=flat-square">
   <img alt="Privacy: No account, no telemetry" src="https://img.shields.io/badge/privacy-no%20telemetry%20%C2%B7%20local%20first-brightgreen?style=flat-square">
 </p>
 
 <p align="center">
-  <a href="https://alepdf-website.vercel.app/"><b>Official Website</b></a> ·
-  <a href="https://github.com/themanoftalent/alepdf/releases"><b>Download Releases</b></a> ·
-  <a href="https://github.com/themanoftalent/alepdf/issues"><b>Report Issue</b></a>
+  <a href="https://macosuygulama.vercel.app/"><b>Official Website</b></a> ·
+  <a href="https://github.com/themanoftalent/pdfale/releases"><b>Download Releases</b></a> ·
+  <a href="https://github.com/themanoftalent/pdfale/issues"><b>Report Issue</b></a>
 </p>
 
 <br>
 
 <p align="center">
-  <img src="assets/screenshots/alepdf-welcome.png" alt="AlePdf Welcome & Tools Hub" width="100%">
+  <img src="assets/screenshots/alepdf-welcome.png" alt="PdfAle Welcome & Tools Hub" width="100%">
   <br>
-  <sub>AlePdf Welcome &amp; Tools Hub: modern native workbench with tools for in-place editing, page organizing, forms, and security.</sub>
+  <sub>PdfAle Welcome &amp; Tools Hub: modern native workbench with tools for in-place editing, page organizing, forms, and security.</sub>
 </p>
 
 ---
@@ -110,15 +110,15 @@ No mandatory accounts, no analytics, no telemetry, and no cloud processing. All 
 
 ## Downloads
 
-Download pre-built releases directly from our [Official Website](https://alepdf-website.vercel.app/) or [GitHub Releases](https://github.com/themanoftalent/alepdf/releases):
+Download pre-built releases directly from our [Official Website](https://macosuygulama.vercel.app/) or [GitHub Releases](https://github.com/themanoftalent/pdfale/releases):
 
 ### macOS
-- **Apple Silicon (M1/M2/M3/M4)**: [`AlePdf-0.18.2-macos-aarch64.dmg`](https://github.com/themanoftalent/alepdf/releases/tag/v0.18.2)
+- **Apple Silicon (M1/M2/M3/M4)**: [`PdfAle-0.18.2-macos-aarch64.dmg`](https://github.com/themanoftalent/pdfale/releases/tag/v0.18.2)
 - Fast native execution, system file association, drag-and-drop installer.
 
 ### Windows
 - **64-bit Windows (x64)**: Available via GitHub Releases (`.exe` / `.msi` / portable `.zip`).
-- Full Explorer right-click context menu integration ("Edit with AlePdf").
+- Full Explorer right-click context menu integration ("Edit with PdfAle").
 
 ### Linux &amp; Other Platforms
 - Available as standalone binary, AppImage, and tarball builds across x86_64 and aarch64 architectures.
@@ -127,20 +127,20 @@ Download pre-built releases directly from our [Official Website](https://alepdf-
 
 ## Built for Agents &amp; CLI
 
-AlePdf includes a powerful command-line interface (`pdfcraft-cli` / `alepdf-cli`) and built-in **Model Context Protocol (MCP)** support, allowing external scripts, automation tools, and AI agents to inspect, render, and modify PDFs programmatically:
+PdfAle includes a powerful command-line interface (`pdfcraft-cli` / `pdfale-cli`) and built-in **Model Context Protocol (MCP)** support, allowing external scripts, automation tools, and AI agents to inspect, render, and modify PDFs programmatically:
 
 ```sh
 # Inspect document structure as JSON
-alepdf-cli info report.pdf
+pdfale-cli info report.pdf
 
 # Extract reading-order text from page 3
-alepdf-cli text paper.pdf --page 3
+pdfale-cli text paper.pdf --page 3
 
 # Headless batch editing: rotate pages and set metadata
-alepdf-cli edit input.pdf --rotate 1,2:90 --delete 5 --title "Quarterly Report" --out output.pdf
+pdfale-cli edit input.pdf --rotate 1,2:90 --delete 5 --title "Quarterly Report" --out output.pdf
 
 # Merge multiple documents into one
-alepdf-cli combine report.pdf appendix.pdf --out combined.pdf
+pdfale-cli combine report.pdf appendix.pdf --out combined.pdf
 ```
 
 ### Model Context Protocol (MCP) Server
@@ -148,8 +148,8 @@ To let AI agents work with local documents safely, launch the opt-in MCP server:
 ```json
 {
   "mcpServers": {
-    "alepdf": {
-      "command": "alepdf-cli",
+    "pdfale": {
+      "command": "pdfale-cli",
       "args": ["mcp", "--root", "/path/to/pdfs"]
     }
   }
@@ -160,7 +160,7 @@ To let AI agents work with local documents safely, launch the opt-in MCP server:
 
 ## Architecture
 
-AlePdf is structured as a modular workspace of decoupled crates:
+PdfAle is structured as a modular workspace of decoupled crates:
 
 | Layer / Crate | Role |
 |---|---|
@@ -178,12 +178,12 @@ AlePdf is structured as a modular workspace of decoupled crates:
 
 ## Building from Source
 
-Building AlePdf requires **Rust 1.95 or later**:
+Building PdfAle requires **Rust 1.95 or later**:
 
 ```sh
 # 1. Clone repository
-git clone https://github.com/themanoftalent/alepdf.git
-cd alepdf
+git clone https://github.com/themanoftalent/pdfale.git
+cd pdfale
 
 # 2. Fetch OCR models (required for text recognition features)
 cargo xtask models
@@ -202,16 +202,16 @@ cargo test --workspace
 ## Author &amp; Community
 
 - **Creator &amp; Maintainer**: **TheManOfTalent**
-- **Website**: [https://alepdf-website.vercel.app/](https://alepdf-website.vercel.app/)
-- **Repository**: [https://github.com/themanoftalent/alepdf](https://github.com/themanoftalent/alepdf)
+- **Website**: [https://macosuygulama.vercel.app/](https://macosuygulama.vercel.app/)
+- **Repository**: [https://github.com/themanoftalent/pdfale](https://github.com/themanoftalent/pdfale)
 
-Feedback, feature requests, and contributions are welcome! Please open an issue on our [GitHub Issues](https://github.com/themanoftalent/alepdf/issues) page.
+Feedback, feature requests, and contributions are welcome! Please open an issue on our [GitHub Issues](https://github.com/themanoftalent/pdfale/issues) page.
 
 ---
 
 ## License
 
-AlePdf is open-source software dual-licensed under:
+PdfAle is open-source software dual-licensed under:
 - **[MIT License](LICENSE-MIT)**
 - **[Apache License 2.0](LICENSE-APACHE)**
 
@@ -221,8 +221,8 @@ All bundled open-source fonts, icons, and dependencies retain their respective l
 
 ## iPhone and iPad companion
 
-The native iOS AlePdf app is a separate SwiftUI/PDFKit implementation, not this Rust desktop binary. As of November 7, 2026, iOS version 1.0 (build 6) is waiting for App Store review. It offers a redesigned Home and reader, selectable-text page search, annotations, page organization, and local working copies. Approval and public availability are pending. These iOS interface changes are not included in the macOS maintenance release, and feature parity between the platforms is not claimed.
+The native iOS PdfAle app is a separate SwiftUI/PDFKit implementation, not this Rust desktop binary. As of November 7, 2026, iOS version 1.0 (build 6) is waiting for App Store review. It offers a redesigned Home and reader, selectable-text page search, annotations, page organization, and local working copies. Approval and public availability are pending. These iOS interface changes are not included in the macOS maintenance release, and feature parity between the platforms is not claimed.
 
 ### macOS 0.18.3 maintenance candidate
 
-Packages the desktop branding, dependency compatibility, and macOS extended-attribute fixes already merged after 0.18.2, and corrects the Linux launcher window class to match the AlePdf app ID. This is not an iOS-interface port. Public release is pending final verification and Apple notarization. The existing 0.18.2 macOS download is ad-hoc signed and not notarized, so macOS may block it. No security bypass is recommended.
+Packages the desktop branding, dependency compatibility, and macOS extended-attribute fixes already merged after 0.18.2, and corrects the Linux launcher window class to match the PdfAle app ID. This is not an iOS-interface port. Public release is pending final verification and Apple notarization. The existing 0.18.2 macOS download is ad-hoc signed and not notarized, so macOS may block it. No security bypass is recommended.

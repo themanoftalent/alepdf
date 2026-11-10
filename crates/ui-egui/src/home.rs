@@ -76,7 +76,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
-            ui.label(egui::RichText::new("Welcome to AlePdf").font(theme::semibold(24.0)));
+            ui.label(egui::RichText::new("Welcome to PdfAle").font(theme::semibold(24.0)));
             ui.label(
                 egui::RichText::new("Professional, lightweight PDF Editor — local, private, and powerful.")
                     .color(t.text_muted)
@@ -93,7 +93,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                         ui.set_width(ui.available_width());
                         ui.horizontal(|ui| {
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new("AlePdf").font(theme::semibold(15.0)));
+                                ui.label(egui::RichText::new("PdfAle").font(theme::semibold(15.0)));
                                 ui.label(egui::RichText::new("Official Website & Project Updates").color(t.text_muted));
                             });
                             // Closed for this run only: the card is back on the next launch.
@@ -201,7 +201,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 });
                 ui.add_space(8.0);
                 if app.recent.is_empty() {
-                    ui.label(egui::RichText::new("Files you open in AlePdf appear here. Drop a PDF anywhere to open it.").color(t.text_muted));
+                    ui.label(egui::RichText::new("Files you open in PdfAle appear here. Drop a PDF anywhere to open it.").color(t.text_muted));
                 }
             }
             let mut open = None;
@@ -267,7 +267,7 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             }
             ui.add_space(20.0);
             widgets::section_title(ui, tl!("Privacy"));
-            ui.label(egui::RichText::new("AlePdf works offline. No telemetry, no account, and no cloud processing.").color(t.text_muted));
+            ui.label(egui::RichText::new("PdfAle works offline. No telemetry, no account, and no cloud processing.").color(t.text_muted));
         });
     });
 }

@@ -13,13 +13,13 @@
 /// prompt shows both, and an AppImage's menu entry gets the icon.
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
-    id: "alepdf",
-    name: "AlePdf",
+    id: "pdfale",
+    name: "PdfAle",
     tagline: "Reading, organizing and editing PDFs",
-    repo: "themanoftalent/alepdf",
+    repo: "themanoftalent/pdfale",
     developer: "TheManOfTalent",
-    former_ids: &["pdfcraft", "printcraft"],
-    former_names: &["PdfCraft", "PrintCraft"],
+    former_ids: &["alepdf", "pdfcraft", "printcraft"],
+    former_names: &["AlePdf", "PdfCraft", "PrintCraft"],
     icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.pdfcraft.png")),
     accent: Some([0xb7, 0x02, 0x28]),
 };

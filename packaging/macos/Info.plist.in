@@ -7,11 +7,11 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>AlePdf</string>
+  <string>PdfAle</string>
   <key>CFBundleName</key>
-  <string>AlePdf</string>
+  <string>PdfAle</string>
   <key>CFBundleExecutable</key>
-  <string>AlePdf</string>
+  <string>PdfAle</string>
   <key>CFBundleIdentifier</key>
   <string>ai.storyteller.alepdf</string>
   <key>CFBundleInfoDictionaryVersion</key>
@@ -26,14 +26,18 @@
   <string>@SHORT_VERSION@</string>
   <key>PdfCraftVersion</key>
   <string>@VERSION@</string>
+  <key>PdfAleVersion</key>
+  <string>@VERSION@</string>
   <key>AlePdfVersion</key>
   <string>@VERSION@</string>
   <key>PdfCraftBuildCommit</key>
   <string>@BUILD_SHA@</string>
+  <key>PdfAleBuildCommit</key>
+  <string>@BUILD_SHA@</string>
   <key>AlePdfBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>AlePdf</string>
+  <string>PdfAle</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
   <!-- Must match MACOSX_DEPLOYMENT_TARGET in package.sh. Big Sur is the first release on
@@ -64,7 +68,7 @@
       <key>LSHandlerRank</key>
       <string>Alternate</string>
       <key>CFBundleTypeIconFile</key>
-      <string>AlePdf</string>
+      <string>PdfAle</string>
       <key>LSItemContentTypes</key>
       <array><string>com.adobe.pdf</string></array>
       <key>CFBundleTypeExtensions</key>

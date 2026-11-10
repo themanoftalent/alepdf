@@ -9,8 +9,8 @@ use craft_update::{CheckResultDialog, CheckResultResponse};
 
 use crate::PdfCraftApp;
 
-/// Where every AlePdf release is listed.
-pub const RELEASES_PAGE: &str = "https://github.com/themanoftalent/alepdf/releases";
+/// Where every PdfAle release is listed.
+pub const RELEASES_PAGE: &str = "https://github.com/themanoftalent/pdfale/releases";
 
 /// Stands in for the network in tests.
 #[cfg(not(target_arch = "wasm32"))]

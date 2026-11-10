@@ -93,12 +93,21 @@ function Get-PeHeader([string] $Path) {
   return @{ Machine = [BitConverter]::ToUInt16($bytes, $pe + 4); Subsystem = [BitConverter]::ToUInt16($bytes, $pe + 0x5C) }
 }
 $Machine = switch ($Arch) { 'x64' { 0x8664 } 'x86' { 0x14C } 'arm64' { 0xAA64 } }
-if (Test-Path (Join-Path $Bin 'alepdf.exe')) {
+if (Test-Path (Join-Path $Bin 'pdfale.exe')) {
+  Copy-Item (Join-Path $Bin 'pdfale.exe') (Join-Path $Bin 'alepdf.exe') -Force
+  Copy-Item (Join-Path $Bin 'pdfale.exe') (Join-Path $Bin 'pdfcraft.exe') -Force
+} elseif (Test-Path (Join-Path $Bin 'alepdf.exe')) {
+  Copy-Item (Join-Path $Bin 'alepdf.exe') (Join-Path $Bin 'pdfale.exe') -Force
   Copy-Item (Join-Path $Bin 'alepdf.exe') (Join-Path $Bin 'pdfcraft.exe') -Force
 }
-if (Test-Path (Join-Path $Bin 'alepdf-cli.exe')) {
+if (Test-Path (Join-Path $Bin 'pdfale-cli.exe')) {
+  Copy-Item (Join-Path $Bin 'pdfale-cli.exe') (Join-Path $Bin 'alepdf-cli.exe') -Force
+  Copy-Item (Join-Path $Bin 'pdfale-cli.exe') (Join-Path $Bin 'pdfcraft-cli.exe') -Force
+} elseif (Test-Path (Join-Path $Bin 'alepdf-cli.exe')) {
+  Copy-Item (Join-Path $Bin 'alepdf-cli.exe') (Join-Path $Bin 'pdfale-cli.exe') -Force
   Copy-Item (Join-Path $Bin 'alepdf-cli.exe') (Join-Path $Bin 'pdfcraft-cli.exe') -Force
 } elseif (Test-Path (Join-Path $Bin 'pdfcraft-cli.exe')) {
+  Copy-Item (Join-Path $Bin 'pdfcraft-cli.exe') (Join-Path $Bin 'pdfale-cli.exe') -Force
   Copy-Item (Join-Path $Bin 'pdfcraft-cli.exe') (Join-Path $Bin 'alepdf-cli.exe') -Force
 }
 
@@ -112,6 +121,8 @@ $Stage = Join-Path $TargetDir "windows-package\$Arch"
 Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Stage | Out-Null
 Copy-Item (Join-Path $Bin 'pdfcraft.exe'), (Join-Path $Bin 'pdfcraft-cli.exe') $Stage
+if (Test-Path (Join-Path $Bin 'pdfale.exe')) { Copy-Item (Join-Path $Bin 'pdfale.exe') $Stage }
+if (Test-Path (Join-Path $Bin 'pdfale-cli.exe')) { Copy-Item (Join-Path $Bin 'pdfale-cli.exe') $Stage }
 if (Test-Path (Join-Path $Bin 'alepdf.exe')) { Copy-Item (Join-Path $Bin 'alepdf.exe') $Stage }
 if (Test-Path (Join-Path $Bin 'alepdf-cli.exe')) { Copy-Item (Join-Path $Bin 'alepdf-cli.exe') $Stage }
 # The document icon embeds Lucide artwork: carry its ISC notice and the project licences
@@ -156,7 +167,7 @@ if ($env:CRAFT_FONTS_DIR) {
 
 # ---- MSI ---------------------------------------------------------------------------------------
 if (-not $PortableOnly) {
-$Msi = Join-Path $Dist "AlePdf-$Version-windows-$Arch.msi"
+$Msi = Join-Path $Dist "PdfAle-$Version-windows-$Arch.msi"
 Invoke-Native 'wix build' {
   wix build (Join-Path $PSScriptRoot 'pdfcraft.wxs') -arch $Arch `
     (Join-Path $PSScriptRoot 'installer-ui.wxs') `
@@ -164,7 +175,8 @@ Invoke-Native 'wix build' {
     -d "DocsDir=$Docs" -d "HasCraftFontLicences=$HasCraftFontLicences" `
     -o $Msi
 }
-# Also copy to legacy name for compatibility if needed
+# Also copy to legacy names for compatibility if needed
+Copy-Item $Msi (Join-Path $Dist "AlePdf-$Version-windows-$Arch.msi") -Force
 Copy-Item $Msi (Join-Path $Dist "pdfcraft-$Version-windows-$Arch.msi") -Force
 
 if ($env:RUN_UPSTREAM_TESTS) {
@@ -181,7 +193,7 @@ Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Ms
 }
 
 # ---- portable zip ------------------------------------------------------------------------------
-$Portable = Join-Path $TargetDir "windows-package\AlePdf-$Version-windows-$Arch-portable"
+$Portable = Join-Path $TargetDir "windows-package\PdfAle-$Version-windows-$Arch-portable"
 Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $Portable | Out-Null
 Copy-Item (Join-Path $Stage '*.exe') $Portable
@@ -238,9 +250,10 @@ Copy-Item (Join-Path $Root 'assets\icons\LICENSE-lucide.txt') $Portable
 Copy-Item (Join-Path $Root 'vendor\hayro-cmap\assets\LICENSE.txt') (Join-Path $Portable 'LICENSE-CMap.txt')
 Copy-Item (Join-Path $Root 'vendor\hayro-interpret\assets\LICENSE_FOXIT') $Portable
 Copy-Item (Join-Path $Root 'vendor\hayro-interpret\assets\CGATS_LICENSE.txt') $Portable
-$Zip = Join-Path $Dist "AlePdf-$Version-windows-$Arch-portable.zip"
+$Zip = Join-Path $Dist "PdfAle-$Version-windows-$Arch-portable.zip"
 Remove-Item -Force $Zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $Portable -DestinationPath $Zip
+Copy-Item $Zip (Join-Path $Dist "AlePdf-$Version-windows-$Arch-portable.zip") -Force
 Copy-Item $Zip (Join-Path $Dist "pdfcraft-$Version-windows-$Arch-portable.zip") -Force
 
 # Smoke-test the CLI when this machine can run it. An ARM64 build made on an x64 runner can't run

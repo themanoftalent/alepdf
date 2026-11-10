@@ -1,4 +1,4 @@
-//! AlePdf links: the website button is one click away everywhere; Help, About, and Home
+//! PdfAle links: the website button is one click away everywhere; Help, About, and Home
 //! expose the official project destinations.
 
 use egui_kittest::Harness;
@@ -20,15 +20,15 @@ fn harness(setup: impl FnOnce(&mut PdfCraftApp) + 'static) -> Harness<'static, P
 #[test]
 fn website_button_in_the_top_bar_opens_website() {
     let mut h = harness(|_| {});
-    h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("AlePdf")).click();
+    h.get_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("PdfAle")).click();
     h.run_steps(2);
     assert_eq!(h.state().last_opened_url.as_deref(), Some(links::WEBSITE));
-    assert_eq!(links::WEBSITE, "https://alepdf-website.vercel.app/");
+    assert_eq!(links::WEBSITE, "https://macosuygulama.vercel.app/");
 }
 
 #[test]
 fn home_screen_links() {
-    for (label, url) in [("AlePdf Website", links::WEBSITE), ("AlePdf on GitHub", "https://github.com/themanoftalent/alepdf")] {
+    for (label, url) in [("PdfAle Website", links::WEBSITE), ("PdfAle on GitHub", "https://github.com/themanoftalent/pdfale")] {
         let mut h = harness(|_| {});
         h.get_by_label("Official Website & Project Updates");
         h.get_by_label(label).click();
@@ -57,7 +57,7 @@ fn about_dialog_shows_the_brand_and_links() {
         app.open_bytes("one.pdf", None, pdf.to_vec()).unwrap();
         app.dialog = Some(Dialog::About);
     });
-    h.get_by_label("AlePdf Website").click();
+    h.get_by_label("PdfAle Website").click();
     h.run_steps(2);
     assert_eq!(h.state().last_opened_url.as_deref(), Some(links::WEBSITE));
 }

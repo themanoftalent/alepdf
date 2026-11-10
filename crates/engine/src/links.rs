@@ -1,15 +1,15 @@
-//! Where AlePdf lives on the web: website, repository and releases.
+//! Where PdfAle lives on the web: website, repository and releases.
 
 use icu_properties::props::Script;
 use std::path::{Path, PathBuf};
 
 /// The app's name in URLs (`github.com/themanoftalent/{APP}`).
-pub const APP: &str = "alepdf";
+pub const APP: &str = "pdfale";
 
-pub const WEBSITE: &str = "https://alepdf-website.vercel.app/";
-pub const APP_PAGE: &str = "https://alepdf-website.vercel.app/";
-pub const GITHUB: &str = "https://github.com/themanoftalent/alepdf";
-pub const DISCORD: &str = "https://alepdf-website.vercel.app/";
+pub const WEBSITE: &str = "https://macosuygulama.vercel.app/";
+pub const APP_PAGE: &str = "https://macosuygulama.vercel.app/";
+pub const GITHUB: &str = "https://github.com/themanoftalent/pdfale";
+pub const DISCORD: &str = "https://macosuygulama.vercel.app/";
 
 /// A link and the registry command that opens it.
 #[derive(Clone, Copy, Debug)]
@@ -23,8 +23,8 @@ pub struct Link {
 
 /// In the order they are shown.
 pub const LINKS: &[Link] = &[
-    Link { command: "help.website", label: "AlePdf Website", url: WEBSITE, icon: "globe" },
-    Link { command: "help.github", label: "AlePdf on GitHub", url: GITHUB, icon: "code-xml" },
+    Link { command: "help.website", label: "PdfAle Website", url: WEBSITE, icon: "globe" },
+    Link { command: "help.github", label: "PdfAle on GitHub", url: GITHUB, icon: "code-xml" },
 ];
 
 pub fn for_command(id: &str) -> Option<&'static Link> {

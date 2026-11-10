@@ -270,7 +270,7 @@ fn main() -> eframe::Result {
     let started = Rc::new(Cell::new(false));
     let first = if choice == RendererChoice::Gl { eframe::Renderer::Glow } else { eframe::Renderer::Wgpu };
     let result = eframe::run_native(
-        "AlePdf",
+        "PdfAle",
         native_options(launch.integrated, launch.window_controls.is_some(), first),
         app_creator(
             launch.clone(),
@@ -331,7 +331,7 @@ fn retry_with_gl(choice: RendererChoice, app_started: bool) -> bool {
 /// The window and renderer settings for one run.
 fn native_options(integrated: bool, app_frame: bool, renderer: eframe::Renderer) -> eframe::NativeOptions {
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("AlePdf")
+        .with_title("PdfAle")
         .with_inner_size([1440.0, 920.0])
         .with_min_inner_size([820.0, 520.0])
         .with_drag_and_drop(true)
@@ -486,7 +486,7 @@ fn app_creator<'a>(
 /// `unsafe` calls.
 fn notify_software_renderer(app: &mut PdfCraftApp, device_type: eframe::wgpu::DeviceType) {
     if device_type == eframe::wgpu::DeviceType::Cpu {
-        app.notify_tr("AlePdf is drawing without a graphics processor, so it may be slow. Updating the graphics driver may help.");
+        app.notify_tr("PdfAle is drawing without a graphics processor, so it may be slow. Updating the graphics driver may help.");
     }
 }
 

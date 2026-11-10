@@ -1565,7 +1565,7 @@ fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
         _ => {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label(egui::RichText::new("AlePdf").font(theme::semibold(22.0)));
+                    ui.label(egui::RichText::new("PdfAle").font(theme::semibold(22.0)));
                     ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
                 });
             });
@@ -1573,7 +1573,7 @@ fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
             ui.label("Professional, lightweight, native PDF Editor by TheManOfTalent.");
             ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("Website:").color(t.text_muted));
-                ui.hyperlink_to("alepdf-website.vercel.app", "https://alepdf-website.vercel.app/");
+                ui.hyperlink_to("macosuygulama.vercel.app", "https://macosuygulama.vercel.app/");
             });
             ui.add_space(6.0);
             ui.label(
