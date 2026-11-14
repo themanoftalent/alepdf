@@ -23,6 +23,23 @@ class PackageAssets(unittest.TestCase):
                 self.assertTrue(asset.is_file(), f"missing package input: {asset}")
                 self.assertGreater(asset.stat().st_size, 0)
 
+    def test_portable_validator_accepts_packaged_executable_pair(self):
+        package = (ROOT / "packaging/windows/package.ps1").read_text()
+        validator = (ROOT / "packaging/windows/test-portable.ps1").read_text()
+        # The unconditional staging copy is the minimum payload, even without aliases.
+        staged = re.search(r"^Copy-Item (.+) \$Stage$", package, re.MULTILINE)
+        self.assertIsNotNone(staged)
+        executables = set(re.findall(r"'([^']+\.exe)'", staged[1]))
+        self.assertEqual(len(executables), 2)
+        accepted = re.search(r"\$ExecutableStems = @\(([^)]+)\)", validator)
+        self.assertIsNotNone(accepted)
+        stems = re.findall(r"'([^']+)'", accepted[1])
+        self.assertTrue(any({f"{stem}.exe", f"{stem}-cli.exe"} == executables for stem in stems))
+        self.assertTrue({"pdfale", "alepdf"}.issubset(stems), "keep legacy preview pairs")
+        self.assertIn('Join-Path $Root "$Stem.exe") -PathType Leaf) -and', validator)
+        self.assertIn('Join-Path $Root "$Stem-cli.exe") -PathType Leaf)', validator)
+        self.assertIn("if (-not $ExeName) { throw", validator)
+
     def test_msi_icon_matches_attributed_artwork(self):
         script = (ROOT / "packaging/windows/package.ps1").read_text()
         match = re.search(r'-d "IconPath=\$\(Join-Path \$Root \'([^\']+)\'\)"', script)

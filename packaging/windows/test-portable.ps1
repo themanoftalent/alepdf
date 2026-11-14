@@ -9,8 +9,20 @@ try {
   $Folders = @(Get-ChildItem -LiteralPath $Scratch -Directory)
   if ($Folders.Count -ne 1) { throw 'Expected one portable package directory.' }
   $Root = $Folders[0].FullName
-  $ExeName = if (Test-Path -LiteralPath (Join-Path $Root 'pdfale.exe')) { 'pdfale.exe' } else { 'alepdf.exe' }
-  $CliName = if (Test-Path -LiteralPath (Join-Path $Root 'pdfale-cli.exe')) { 'pdfale-cli.exe' } else { 'alepdf-cli.exe' }
+  # The package and WiX use pdfcraft; older branded previews may use either alias.
+  # Select a complete matching pair, never mix an app from one name with another CLI.
+  $ExecutableStems = @('pdfcraft', 'pdfale', 'alepdf')
+  $ExeName = $null
+  $CliName = $null
+  foreach ($Stem in $ExecutableStems) {
+    if ((Test-Path -LiteralPath (Join-Path $Root "$Stem.exe") -PathType Leaf) -and
+        (Test-Path -LiteralPath (Join-Path $Root "$Stem-cli.exe") -PathType Leaf)) {
+      $ExeName = "$Stem.exe"
+      $CliName = "$Stem-cli.exe"
+      break
+    }
+  }
+  if (-not $ExeName) { throw 'Missing required portable executable pair (pdfcraft, pdfale or alepdf).' }
   foreach ($Name in $ExeName, $CliName, 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'LICENSE-app-icon.txt', 'LICENSE-document.txt', 'OFL-Inter.txt', 'OFL-JetBrainsMono.txt', 'OFL-DancingScript.txt', 'portable.txt', 'models/ATTRIBUTION.txt') {
     $File = Join-Path $Root $Name
     if (-not (Test-Path -LiteralPath $File -PathType Leaf)) { throw "Missing required portable payload: $Name" }
