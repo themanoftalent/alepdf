@@ -484,7 +484,13 @@ impl PdfCraftApp {
                     self.active_ids().and_then(|(_, id)| self.session.get(id)).is_some_and(|d| d.allows_copying())
                 }
                 CUT => organize && enabled_id("page.cut"),
-                PASTE => organize && self.page_clipboard.is_some() && enabled_id("page.paste"),
+                PASTE => {
+                    (organize && self.page_clipboard.is_some() && enabled_id("page.paste"))
+                        || (!organize
+                            && !self.is_preparing()
+                            && matches!(self.quick_tool, crate::QuickTool::EditText | crate::QuickTool::AddText)
+                            && view.and_then(|v| self.session.get(v.id)).is_some_and(|doc| doc.allows_modification()))
+                }
                 SELECT_ALL | DELETE => has_doc,
                 ACTUAL_SIZE | PAGE_LEVEL | FIT_WIDTH | FIT_HEIGHT | ZOOM_IN | ZOOM_OUT | ROTATE_CW | ROTATE_CCW => has_doc,
                 PANEL => panel(command).is_some(),

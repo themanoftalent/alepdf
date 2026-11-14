@@ -1974,7 +1974,7 @@ fn draw_pages(
         }
         let (page, at) = view.comments.context_at.unwrap_or((view.current, [0.0, 0.0]));
         let can_copy_items = can_copy && (view.image_selection.is_some() || view.selected_text().is_some() || has_copy_image);
-        let can_paste = can_paste_image && can_modify;
+        let can_paste = can_modify && (can_paste_image || matches!(tool, QuickTool::EditText | QuickTool::AddText));
         let perms = PageMenuPerms {
             can_modify,
             can_assemble: doc.allows_assembly(),
@@ -3333,7 +3333,11 @@ fn apply_frame_requests(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui, 
             }
         }
         Some(PageMenuAction::Paste(page, at)) => {
-            app.paste_image_at(page, at);
+            if app.can_paste_image() {
+                app.paste_image_at(page, at);
+            } else {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::RequestPaste);
+            }
         }
         Some(PageMenuAction::RotateCCW) => {
             app.views[index].rotate_view(false);

@@ -213,6 +213,9 @@ impl CjkPreference {
 /// first for Chinese, Japanese first otherwise). Call it when the language changes; the new
 /// faces take effect next frame.
 pub fn install_fonts_for(ctx: &egui::Context, cjk: CjkPreference) {
+    // Untrusted document metadata may contain glyphs absent from every installed face.
+    // Show a placeholder instead of crashing the entire editor.
+    ctx.set_missing_glyph_policy(egui::epaint::text::MissingGlyphPolicy::Tofu);
     ctx.set_fonts(installed_font_definitions(cjk));
 }
 

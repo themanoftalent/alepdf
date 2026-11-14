@@ -11,7 +11,7 @@ pub(crate) fn print_refused() -> &'static str {
 }
 
 enum ClipboardPaste {
-    Text,
+    Text(String),
     Image(std::sync::Arc<egui::ColorImage>),
 }
 
@@ -30,12 +30,13 @@ impl PdfCraftApp {
     /// ⌘C / ⌘X / ⌘V copy, cut and paste text or images on canvas (unless a text field has focus).
     pub(super) fn clipboard_keys(&mut self, i: usize, ctx: &egui::Context) {
         use egui::{Key, KeyboardShortcut, Modifiers};
+        self.remember_text_paste_position(i, ctx);
         let pastes: Vec<_> = ctx.input(|input| {
             input
                 .events
                 .iter()
                 .filter_map(|event| match event {
-                    egui::Event::Paste(_) => Some(ClipboardPaste::Text),
+                    egui::Event::Paste(text) => Some(ClipboardPaste::Text(text.clone())),
                     egui::Event::PasteImage(image) => Some(ClipboardPaste::Image(image.clone())),
                     _ => None,
                 })
@@ -43,7 +44,7 @@ impl PdfCraftApp {
         });
         let free = self.dialog.is_none() && !self.palette_open && !ctx.egui_wants_keyboard_input() && !self.is_preparing();
         if !free || self.views.get(i).is_some_and(|v| v.forms.focus.is_some() || v.organize) {
-            self.receive_pastes(i, pastes, false);
+            self.receive_pastes(i, pastes, false, ctx);
             return;
         }
         let copy = ctx.input(|input| input.events.iter().any(|e| matches!(e, egui::Event::Copy)))
@@ -68,7 +69,7 @@ impl PdfCraftApp {
             self.cut_page_image(sel.page, sel.index);
         }
         if !pastes.is_empty() {
-            self.receive_pastes(i, pastes, true);
+            self.receive_pastes(i, pastes, true, ctx);
             return;
         }
         if paste {
@@ -89,14 +90,18 @@ impl PdfCraftApp {
         }
     }
 
-    fn receive_pastes(&mut self, view: usize, pastes: Vec<ClipboardPaste>, images_allowed: bool) {
+    fn receive_pastes(&mut self, view: usize, pastes: Vec<ClipboardPaste>, images_allowed: bool, ctx: &egui::Context) {
         let page = self.views.get(view).map_or(0, |view| view.current);
+        let text_allowed = images_allowed && !pastes.iter().any(|paste| matches!(paste, ClipboardPaste::Image(_)));
         for paste in pastes {
             match paste {
-                ClipboardPaste::Text => {
+                ClipboardPaste::Text(text) => {
                     // Text fields may own the paste; the canvas cache still observes its contents.
                     self.last_copied_image = None;
                     self.last_copied_file = None;
+                    if text_allowed {
+                        self.paste_canvas_text(view, &text, ctx);
+                    }
                 }
                 ClipboardPaste::Image(image) if images_allowed => {
                     self.paste_received_image(page, &image);
@@ -104,6 +109,89 @@ impl PdfCraftApp {
                 ClipboardPaste::Image(_) => {}
             }
         }
+    }
+
+    /// Remember a page click rather than the menu's later pointer position. Coordinates are
+    /// display-space PDF points, so zooming and view rotation do not move the insertion point.
+    fn remember_text_paste_position(&self, index: usize, ctx: &egui::Context) {
+        // Clicking Paste in a popup over the page must not move its destination.
+        if egui::Popup::is_any_open(ctx) {
+            return;
+        }
+        let Some(view) = self.views.get(index) else { return };
+        let Some(at) = ctx.input(|i| (i.pointer.primary_pressed() || i.pointer.secondary_pressed()).then(|| i.pointer.interact_pos()).flatten())
+        else {
+            return;
+        };
+        if !view.viewport_rect().contains(at) {
+            return;
+        }
+        for (page, rect) in view.visible_page_rects() {
+            if !rect.contains(at) {
+                continue;
+            }
+            let Some(xf) = view.page_xform(page) else { continue };
+            let Some(info) = self.session.get(view.id).and_then(|doc| doc.info.pages.get(page)) else { continue };
+            let (x, y) = xf.screen_to_view(at);
+            let point = [f64::from(x), f64::from(info.height - y)];
+            ctx.data_mut(|data| data.insert_temp(egui::Id::unique(("canvas-text-paste", view.id)), (page, point)));
+            break;
+        }
+    }
+
+    /// A blank cell in a static PDF table is page space, not a text widget. Paste there creates
+    /// an ordinary, undoable added-text object. Focused editors still receive their own event.
+    fn paste_canvas_text(&mut self, index: usize, text: &str, ctx: &egui::Context) -> bool {
+        if !matches!(self.quick_tool, QuickTool::EditText | QuickTool::AddText) || text.trim().is_empty() {
+            return false;
+        }
+        let Some(view) = self.views.get(index) else { return false };
+        if view.line_editor.is_some() || view.content.draft.is_some() {
+            return false;
+        }
+        let id = view.id;
+        let Some(doc) = self.session.get(id) else { return false };
+        if !doc.allows_modification() {
+            self.notify_error(tl!("The document's security settings don't allow this change"));
+            return false;
+        }
+        let anchor = ctx
+            .data(|data| data.get_temp::<(usize, [f64; 2])>(egui::Id::unique(("canvas-text-paste", id))))
+            .filter(|(page, _)| *page == view.current && view.page_screen_rect(*page).is_some());
+        let page = anchor.map_or(view.current, |(page, _)| page);
+        let Some(info) = doc.info.pages.get(page) else { return false };
+        let (width, height) = (f64::from(info.width), f64::from(info.height));
+        let at = anchor.map(|(_, at)| at).unwrap_or_else(|| {
+            let point = ctx.pointer_latest_pos().filter(|p| view.viewport_rect().contains(*p));
+            if let (Some(point), Some(xf)) = (point, view.page_xform(page))
+                && xf.rect.contains(point)
+            {
+                let (x, y) = xf.screen_to_view(point);
+                return [f64::from(x), height - f64::from(y)];
+            }
+            [width * 0.25, height * 0.5]
+        });
+        if !at.iter().all(|v| v.is_finite()) || width <= 0.0 || height <= 0.0 {
+            return false;
+        }
+        let mut added = self.text_style.clone();
+        added.text = text.replace("\r\n", "\n").replace('\r', "\n");
+        let size = if added.size.is_finite() && added.size > 0.0 { added.size } else { 12.0 };
+        added.size = size;
+        let x = at[0].clamp(0.0, (width - 1.0).max(0.0));
+        let y = at[1].clamp(0.0, height);
+        added.rect = [x, (y - size * 1.2).max(0.0), (x + 200.0).min(width), y];
+        let item = doc.added().iter().filter(|item| item.page == page).count();
+        if !self.apply_edit(pdfcraft_engine::Edit::AddText { page, text: added }) {
+            return false;
+        }
+        if let Some(view) = self.views.get_mut(index) {
+            view.content.selected = Some((page, item));
+            view.content.select_added = Some((page, item));
+            view.image_selection = None;
+        }
+        self.notify_tr("Text pasted");
+        true
     }
 
     /// Shared permission gate for copying selected page text from menus and keyboard events.

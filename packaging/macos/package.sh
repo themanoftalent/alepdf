@@ -119,7 +119,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$WORK/bin/pdfcraft" "$APP/Contents/MacOS/PdfAle"
 cp "$ROOT/assets/app-icon/pdfcraft.icns" "$APP/Contents/Resources/PdfAle.icns"
 # Required embedded-font notices are independent of optional font inputs.
-cp "$ROOT/NOTICE" "$APP/Contents/Resources/NOTICE"
+copy_docs "$APP/Contents/Resources"
+cp "$ROOT/ATTRIBUTION.md" "$APP/Contents/Resources/ATTRIBUTION.md"
+cp -R "$ROOT/licenses" "$APP/Contents/Resources/licenses"
 # The standard About panel (PdfAle menu > About PdfAle) shows Credits.rtf under the version.
 cp "$HERE/Credits.rtf" "$APP/Contents/Resources/Credits.rtf"
 copy_font_licences "$APP/Contents/Resources"

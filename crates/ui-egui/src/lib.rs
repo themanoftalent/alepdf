@@ -83,6 +83,7 @@ mod hooks;
 mod persist;
 mod platform;
 mod state;
+mod text_menu;
 mod tools;
 mod workflows;
 

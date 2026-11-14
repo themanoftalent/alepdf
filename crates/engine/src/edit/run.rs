@@ -945,7 +945,7 @@ pub(crate) fn clean_orphaned_markup_annotations(doc: &mut pdfcraft_cos::Document
             let mut new_max_y = f64::NEG_INFINITY;
             let mut quads_changed = false;
 
-            for chunk in numbers.chunks_exact(8) {
+            for chunk in numbers.as_chunks::<8>().0 {
                 let xs = [chunk[0], chunk[2], chunk[4], chunk[6]];
                 let ys = [chunk[1], chunk[3], chunk[5], chunk[7]];
                 let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);

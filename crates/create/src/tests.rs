@@ -1476,14 +1476,10 @@ fn strokes(w: u32, h: u32) -> Vec<u8> {
 /// The one-bit samples (true for white) a Group 4 image stream decodes to, through an
 /// independent decoder.
 fn g4_rows(s: &Stream) -> Vec<Vec<bool>> {
-    struct Rows(Vec<Vec<bool>>, Vec<bool>, usize);
+    struct Rows(Vec<Vec<bool>>, usize);
     impl hayro_ccitt::Decoder for Rows {
-        fn push_pixels(&mut self, white: bool, count: u32) {
-            self.1.extend(std::iter::repeat_n(white, count as usize));
-        }
-        fn next_line(&mut self) {
-            let mut row = std::mem::take(&mut self.1);
-            row.truncate(self.2);
+        fn push_row(&mut self, changes: &[u32]) {
+            let row = (0..self.1).map(|x| changes.partition_point(|&c| c as usize <= x) % 2 == 0).collect();
             self.0.push(row);
         }
     }
@@ -1495,9 +1491,9 @@ fn g4_rows(s: &Stream) -> Vec<Vec<bool>> {
         end_of_line: false,
         rows_are_byte_aligned: false,
         encoding: hayro_ccitt::EncodingMode::Group4,
-        invert_black: false,
+        strict: false,
     };
-    let mut out = Rows(Vec::new(), Vec::new(), w as usize);
+    let mut out = Rows(Vec::new(), w as usize);
     hayro_ccitt::decode(&s.raw, &mut out, &mut hayro_ccitt::DecoderContext::new(settings)).unwrap();
     out.0
 }

@@ -258,8 +258,8 @@ Every asset PdfCraft includes, bundles or uses to build its published material, 
 | `assets/icons/a-large-small.svg` | Lucide icon "a-large-small" | Lucide Contributors (portions Cole Bemis, Feather) | ISC AND MIT | https://github.com/lucide-icons/lucide (npm lucide-static 1.49.0, icons/a-large-small.svg) | UI icon, embedded via crates/ui-egui/src/widgets/icon_data.rs |
 | `assets/icons/move-horizontal.svg` | Lucide icon "move-horizontal" | Lucide Contributors (portions Cole Bemis, Feather) | ISC AND MIT | https://github.com/lucide-icons/lucide (npm lucide-static 1.49.0, icons/move-horizontal.svg) | UI icon, embedded via crates/ui-egui/src/icon_data.rs |
 | `assets/icons/google-drive.svg` | Google Drive icon | Google | Apache-2.0 | Google Drive brand assets | Google Drive cloud integration |
-| `assets/screenshots/alepdf-editor.png` | PdfAle screenshot: Editor | AlePdf contributors | MIT OR Apache-2.0 | this repository | README screenshot showing PdfAle editor interface |
-| `assets/screenshots/alepdf-welcome.png` | PdfAle screenshot: Welcome | AlePdf contributors | MIT OR Apache-2.0 | this repository | README hero screenshot showing PdfAle welcome screen |
+| `assets/screenshots/alepdf-editor.png` | PdfAle screenshot: Editor | PdfAle contributors | MIT OR Apache-2.0 | this repository | README screenshot showing PdfAle editor interface |
+| `assets/screenshots/alepdf-welcome.png` | PdfAle screenshot: Welcome | PdfAle contributors | MIT OR Apache-2.0 | this repository | README hero screenshot showing PdfAle welcome screen |
 
 ## Compiled in through dependencies (6)
 

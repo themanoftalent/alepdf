@@ -357,6 +357,39 @@ fn selected_text_copy_keeps_focused_input_clipboard_ownership() {
     assert!(!page_copy, "page text must not also consume the Copy event");
 }
 
+/// A text field's right-click menu acts on the field: Cut takes the search text, Turkish letters
+/// and symbols included, and the page's own menu does not open over it.
+#[test]
+fn a_text_field_has_a_right_click_menu_that_cuts_its_selection() {
+    use egui_kittest::kittest::Queryable;
+    let query = "İstanbul çığ ∑ x²";
+    let (mut h, _) = harness(|_| {});
+    h.state_mut().views[0].open_find();
+    h.state_mut().views[0].find.as_mut().unwrap().query = query.into();
+    h.run_steps(3);
+    h.ctx.memory_mut(|m| m.request_focus(egui::Id::unique("find-input")));
+    h.run_steps(2);
+    h.key_press_modifiers(Modifiers::COMMAND, egui::Key::A);
+    h.run_steps(2);
+    let input = h.get(egui_kittest::kittest::By::new().role(egui::accesskit::Role::TextInput).value(query)).rect().center();
+    h.hover_at(input);
+    h.run_steps(1);
+    for pressed in [true, false] {
+        h.event(Event::PointerButton { pos: input, button: PointerButton::Secondary, pressed, modifiers: Modifiers::NONE });
+        h.run_steps(1);
+    }
+    h.run_steps(2);
+    assert!(h.query_all_by_label_contains("Take a snapshot").next().is_none(), "the page menu stays closed");
+    h.get_by(|n| n.label().is_some_and(|l| l.starts_with("Cut"))).click();
+    let mut cut = false;
+    for _ in 0..4 {
+        h.step();
+        cut |= copied(&h, query);
+    }
+    assert!(cut, "the selection is on the clipboard");
+    assert_eq!(h.state().views[0].find.as_ref().unwrap().query, "", "and gone from the field");
+}
+
 /// `n` pages of 300×200, each ending with one line of Helvetica text near its bottom edge.
 fn bottom_lines(n: usize) -> Vec<u8> {
     let mut objects = String::new();
@@ -648,4 +681,137 @@ fn full_screen_double_click_selects_a_word_and_stays_on_the_page() {
     h.state_mut().apply_full_screen(false);
     h.run_steps(30);
     assert_eq!(h.state().views[0].current, 0, "no page turn after leaving");
+}
+
+/// Static table cells have no text widget. Copy an existing PDF run, click an empty
+/// destination, then paste it as a single undoable text object rather than silently dropping it.
+#[test]
+fn copied_email_pastes_into_an_empty_static_pdf_cell() {
+    let email = "sender@example.test";
+    let (mut h, source) = harness_with(text_pdf("BT /F1 14 Tf 20 150 Td (sender@example.test) Tj ET"), |app| {
+        app.system_clipboard = false;
+        assert!(app.execute("edit.edit_text"));
+    });
+    click(&mut h, source);
+    h.run_steps(4);
+    assert!(h.state().views[0].line_editor.is_some());
+    h.key_press_modifiers(Modifiers::COMMAND, egui::Key::A);
+    h.run_steps(2);
+    h.event(Event::Copy);
+    let mut did_copy = false;
+    for _ in 0..3 {
+        h.step();
+        did_copy |= copied(&h, email);
+    }
+    assert!(did_copy, "the actual source editor owns Copy");
+    let xf = h.state().views[0].page_xform(0).unwrap();
+    let target = xf.norm_to_screen(0.4, 0.65);
+    h.hover_at(target);
+    click(&mut h, target);
+    h.run_steps(4);
+    assert!(h.state().views[0].line_editor.is_none());
+    h.event(Event::Paste(email.into()));
+    h.run_steps(4);
+    let id = h.state().views[0].id;
+    let added = h.state().session.get(id).unwrap().added();
+    assert_eq!(added.len(), 1);
+    let pdfcraft_engine::AddedContent::Text(text) = &added[0].content else { panic!("text expected") };
+    assert_eq!(text.text, email);
+    assert!((text.rect[0] - 120.0).abs() < 1.0);
+    assert!((text.rect[3] - 70.0).abs() < 1.0);
+    // Commit any editor activated during the paste before checking the saved PDF.
+    let away = h.state().views[0].page_xform(0).unwrap().norm_to_screen(0.8, 0.85);
+    h.hover_at(away);
+    click(&mut h, away);
+    h.run_steps(4);
+    let bytes = h.state().session.save_bytes(id).unwrap();
+    let mut reopened = pdfcraft_engine::Session::new();
+    let reopened_id = reopened.open("pasted.pdf", None, bytes, None).unwrap();
+    let saved = reopened.get(reopened_id).unwrap().added();
+    assert_eq!(saved.len(), 1);
+    let pdfcraft_engine::AddedContent::Text(saved_text) = &saved[0].content else { panic!("text expected") };
+    assert_eq!(saved_text.text, email);
+    assert!((saved_text.rect[0] - 120.0).abs() < 1.0);
+    assert!((saved_text.rect[3] - 70.0).abs() < 1.0);
+    // Key release and a subsequent render cannot repeat the delivered paste.
+    h.event(Event::Key { key: egui::Key::V, physical_key: None, pressed: false, repeat: false, modifiers: Modifiers::NONE });
+    h.run_steps(3);
+    assert_eq!(h.state().session.get(id).unwrap().added().len(), 1);
+    h.state_mut().undo();
+    h.run_steps(2);
+    assert!(h.state().session.get(id).unwrap().added().is_empty());
+}
+
+#[test]
+fn canvas_text_paste_does_not_add_text_in_read_mode_or_while_searching() {
+    let (mut h, _) = harness(|app| app.system_clipboard = false);
+    h.event(Event::Paste("sender@example.test".into()));
+    h.run_steps(2);
+    let id = h.state().views[0].id;
+    assert!(h.state().session.get(id).unwrap().added().is_empty());
+    assert!(h.state_mut().execute("edit.edit_text"));
+    h.state_mut().views[0].open_find();
+    h.run_steps(3);
+    h.ctx.memory_mut(|m| m.request_focus(egui::Id::unique("find-input")));
+    h.run_steps(2);
+    h.event(Event::Paste("sender@example.test".into()));
+    h.run_steps(3);
+    assert_eq!(h.state().views[0].find.as_ref().unwrap().query, "sender@example.test");
+    assert!(h.state().session.get(id).unwrap().added().is_empty());
+}
+
+#[test]
+fn pasted_text_follows_the_clicked_cell_after_view_rotation() {
+    for rotation in [90, 180, 270] {
+        let (mut h, _) = harness(move |app| {
+            app.system_clipboard = false;
+            app.views[0].rotation = rotation;
+            assert!(app.execute("edit.edit_text"));
+        });
+        h.key_press_modifiers(Modifiers::COMMAND, egui::Key::Num0);
+        h.run_steps(4);
+        let target = h.state().views[0].page_xform(0).unwrap().norm_to_screen(0.4, 0.65);
+        assert!(h.state().views[0].viewport_rect().contains(target), "test destination is visible at {rotation}");
+        h.hover_at(target);
+        click(&mut h, target);
+        h.run_steps(3);
+        h.event(Event::Paste("sender@example.test".into()));
+        h.run_steps(3);
+        let doc = h.state().session.get(h.state().views[0].id).unwrap();
+        assert_eq!(doc.added().len(), 1, "rotation {rotation}");
+        let pdfcraft_engine::AddedContent::Text(text) = &doc.added()[0].content else { panic!("text expected") };
+        assert!((text.rect[0] - 120.0).abs() < 1.0, "rotation {rotation}, rect {:?}", text.rect);
+        assert!((text.rect[3] - 70.0).abs() < 1.0, "rotation {rotation}, rect {:?}", text.rect);
+    }
+}
+
+#[test]
+fn context_paste_uses_the_right_clicked_cell_not_the_menu_item() {
+    use egui_kittest::kittest::Queryable;
+    let (mut h, _) = harness(|app| {
+        app.system_clipboard = false;
+        assert!(app.execute("edit.edit_text"));
+    });
+    let xf = h.state().views[0].page_xform(0).unwrap();
+    let previous = xf.norm_to_screen(0.2, 0.6);
+    h.hover_at(previous);
+    click(&mut h, previous);
+    h.run_steps(3);
+    let target = h.state().views[0].page_xform(0).unwrap().norm_to_screen(0.4, 0.65);
+    h.hover_at(target);
+    for pressed in [true, false] {
+        h.event(Event::PointerButton { pos: target, button: PointerButton::Secondary, pressed, modifiers: Modifiers::NONE });
+        h.run_steps(1);
+    }
+    h.run_steps(2);
+    h.get_by_label_contains("Paste").click();
+    h.run_steps(3);
+    h.event(Event::Paste("sender@example.test".into()));
+    h.run_steps(4);
+    let doc = h.state().session.get(h.state().views[0].id).unwrap();
+    assert_eq!(doc.added().len(), 1);
+    let pdfcraft_engine::AddedContent::Text(text) = &doc.added()[0].content else { panic!("text expected") };
+    assert_eq!(text.text, "sender@example.test");
+    assert!((text.rect[0] - 120.0).abs() < 1.0, "{:?}", text.rect);
+    assert!((text.rect[3] - 70.0).abs() < 1.0, "{:?}", text.rect);
 }

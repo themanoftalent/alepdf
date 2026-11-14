@@ -88,7 +88,10 @@ fn decode_ccitt(data: &[u8], p: &CcittParams, max_rows: u32) -> Result<Vec<u8>, 
         columns,
         rows,
         end_of_block: p.end_of_block,
-        end_of_line: p.end_of_line,
+        // Group 3 producers sometimes claim EOL markers for plain byte-aligned rows.
+        // hayro 0.5 uses this flag to skip to the next EOL, discarding the remaining image
+        // when none exist. Trust the actual prefix; the decoder also recognizes later EOLs.
+        end_of_line: p.end_of_line && (p.k < 0 || starts_with_end_of_line(data)),
         // Group 3 rows on bytes may have end-of-line codes whatever `end_of_line` says (the filter
         // always accepts them), with the fill starting each code on a byte or ending it on one (T.4's
         // fill, as TIFF writes it). Read unaligned, the codes mark the rows either way; without
@@ -100,7 +103,9 @@ fn decode_ccitt(data: &[u8], p: &CcittParams, max_rows: u32) -> Result<Vec<u8>, 
             0 => hayro_ccitt::EncodingMode::Group3_1D,
             _ => hayro_ccitt::EncodingMode::Group3_2D,
         },
-        strict: false,
+        // Keep only fully decoded rows. Lenient hayro 0.5 recovery pads a truncated row with
+        // white pixels, which would make an incomplete export look complete to callers.
+        strict: true,
     };
     // u32 to usize: wasm32 and up have at least 32-bit usize.
     let mut out = Rows::new(columns as usize, rows as usize, p.black_is_1);
@@ -211,6 +216,16 @@ impl hayro_ccitt::Decoder for Rows {
 mod tests {
     use super::*;
 
+    #[test]
+    fn group3_byte_aligned_rows_without_eols_ignore_a_spurious_eol_flag() {
+        // Two white runs of length 8: T.4 code 10011, padded to a byte per row.
+        let data = [0b1001_1000, 0b1001_1000];
+        for end_of_line in [false, true] {
+            let params = CcittParams { columns: 8, rows: 2, end_of_line, encoded_byte_align: true, ..CcittParams::default() };
+            assert_eq!(decode_ccitt(&data, &params, 2).unwrap(), [0xFF, 0xFF]);
+        }
+    }
+
     /// A run pays for the rows an image asks for and the code it reads, before any of it is
     /// decoded: rows the data doesn't hold are paid for too, as a few bytes can ask for any number.
     #[test]
@@ -249,10 +264,10 @@ mod tests {
 
     /// The rows decoded by an independent decoder (`hayro-ccitt`), as 1 for white and 0 for black.
     pub(crate) fn decode(data: &[u8], columns: u32, rows: u32) -> Vec<Vec<bool>> {
-        struct Rows(Vec<Vec<bool>>, Vec<bool>, usize);
+        struct Rows(Vec<Vec<bool>>, usize);
         impl hayro_ccitt::Decoder for Rows {
             fn push_row(&mut self, changes: &[u32]) {
-                let row = (0..self.2).map(|x| changes.partition_point(|&c| c as usize <= x) % 2 == 0).collect();
+                let row = (0..self.1).map(|x| changes.partition_point(|&c| c as usize <= x) % 2 == 0).collect();
                 self.0.push(row);
             }
         }
@@ -265,7 +280,7 @@ mod tests {
             encoding: hayro_ccitt::EncodingMode::Group4,
             strict: false,
         };
-        let mut out = Rows(Vec::new(), Vec::new(), columns as usize);
+        let mut out = Rows(Vec::new(), columns as usize);
         hayro_ccitt::decode(data, &mut out, &mut hayro_ccitt::DecoderContext::new(settings)).unwrap();
         out.0
     }
